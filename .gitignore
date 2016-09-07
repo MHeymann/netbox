@@ -44,4 +44,4 @@
 *.pdf
 
 run_server
-client
+run_client

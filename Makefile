@@ -18,7 +18,7 @@ CLIENT_OBJS = $(PACKET_OBJS) $(QUEUE_OBJS) $(CLIENT_SOCKET_OBJS)
 
 OBJS = $(SERVER_OBJS) $(CLIENT_OBJS)
 TESTEXES = 
-EXES = run_server client
+EXES = run_server run_client
 
 ### FLAGS #################################################################
 
@@ -42,7 +42,7 @@ tests: $(TESTEXES)
 run_server: $(SERVER_OBJS) $(SRC_DIR)/server/chat_server.c
 	$(COMPILE) -o $@ $^ $(LFLAGS)
 
-client: $(CLIENT_OBJS) $(SRC_DIR)/client/chat_client.c
+run_client: $(CLIENT_OBJS) $(SRC_DIR)/client/chat_client.c
 	$(COMPILE) -o $@ $^ $(LFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
