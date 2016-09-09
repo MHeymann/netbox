@@ -1,6 +1,9 @@
 #ifndef CODE_H
 #define CODE_H
 
+/*
+ * Macro definitions of the codes used to specify spacket function.
+ */
 #define QUIT		0
 #define SEND		1
 #define ECHO		2

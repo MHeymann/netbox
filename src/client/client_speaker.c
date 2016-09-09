@@ -36,6 +36,18 @@ int connect_speaker(client_speaker_t *speaker);
 
 /*** Functions ***********************************************************/
 
+/**
+ * Allocate heap space for the data used to guide this speaker, as defined
+ * in struct client_speaker.
+ * The strings are duplicated and the params provided must be free'd 
+ * seperately by the caller.
+ * 
+ * @param[in] name:		The username of the client.
+ * @param[in] hostname:	The ip address of the server.
+ * @param[in] port:		The port of the server. 
+ *
+ * @return A pointer to a new instance of struct client_speaker.
+ */
 client_speaker_t *new_client_speaker(char *name, char *hostname, int port)
 {
 	client_speaker_t *speaker = NULL;
@@ -53,6 +65,11 @@ client_speaker_t *new_client_speaker(char *name, char *hostname, int port)
 	return speaker;
 }
 
+/**
+ * Free a struct client_speaker.
+ *
+ * @param[in] speaker: The datastructure to be free'd.
+ */
 void free_client_speaker(client_speaker_t *speaker)
 {
 	if (!speaker) {
@@ -78,6 +95,12 @@ void free_client_speaker(client_speaker_t *speaker)
 	free(speaker);
 }
 
+/**
+ * Free a struct client_speaker.
+ *
+ * @param[in] speaker: The datastructure to be free'd.
+ */
+/*
 void free_speaker(client_speaker_t *speaker)
 {
 	if (!speaker) {
@@ -97,7 +120,14 @@ void free_speaker(client_speaker_t *speaker)
 
 	free(speaker);
 }
+*/
 
+/**
+ * Request a list of online users from the server.
+ *
+ * @param[in] speaker:	The datastructure with the socket descriptor the
+ *						request must be sent to.
+ */
 void get_online_names(client_speaker_t *speaker)
 {
 	packet_t *packet = new_packet(GET_ULIST, speaker_strdup(speaker->name), NULL, NULL);
@@ -111,6 +141,13 @@ void get_online_names(client_speaker_t *speaker)
 	free_packet(packet);
 }
 
+/**
+ * Send a string as a message to another user.
+ * @param[in] speaker:	The struct containing the socket descriptor to
+ *						be sent to.
+ * @param[in] s:		The string to be sent as a message.
+ * @param[in] to:		The username of the recipient.
+ */
 int send_string(client_speaker_t *speaker, char *s, char *to)
 {
 	packet_t *packet = new_packet(SEND, speaker_strdup(speaker->name), 
@@ -130,6 +167,13 @@ int send_string(client_speaker_t *speaker, char *s, char *to)
 	return FALSE;
 }
 
+/**
+ * Send a string to the server to be echoed back. 
+ * @param[in] speaker:	The struct containing the socket descriptor to
+ *						be sent to.
+ * @param[in] s:		The message to be echoed.
+ * @return TRUE(1) if successful, FALSE(0) otherwise.
+ */
 int echo_string(client_speaker_t *speaker, char *s)
 {
 	packet_t *packet = new_packet(ECHO, speaker_strdup(speaker->name), 
@@ -148,6 +192,15 @@ int echo_string(client_speaker_t *speaker, char *s)
 	return FALSE;
 }
 
+/**
+ * Broadcast a string to all other users.
+ *
+ * @param[in] speaker:	The struct containing the socket descriptor to
+ *						be sent to.
+ * @param[in] s:		The message to be broadcast.
+ *
+ * @return TRUE(1) if successful, FALSE(0) otherwise.
+ */
 int broadcast_string(client_speaker_t *speaker, char *s)
 {
 	packet_t *packet = new_packet(BROADCAST, speaker_strdup(speaker->name), 
@@ -167,11 +220,26 @@ int broadcast_string(client_speaker_t *speaker, char *s)
 	return FALSE;
 }
 
+/**
+ * return the filed descriptor of the speaker's socket.
+ *
+ * @param[in] speaker: the speaker whose socket is required.
+ *
+ * @return An integer value, a file descriptor of the socket.
+ */
 int get_speaker_sd(client_speaker_t *speaker)
 {
 	return speaker->sd;
 }
 
+/**
+ * Create a connection to the server and log in.
+ *
+ * @param[in] speaker:	The speaker that must connect.
+ * @param[in] pw:		The password to give to the server.
+ *
+ * @return TRUE(1) when successful and FALSE(0) when not.
+ */
 int speaker_login(client_speaker_t *speaker, char *pw)
 {
 	packet_t *packet = NULL;
@@ -234,6 +302,15 @@ int speaker_login(client_speaker_t *speaker, char *pw)
 	}
 }
 
+/**
+ * End the current session by notifying the server and killing 
+ * the connection.
+ *
+ * @param[in] speaker: The speaker of the client to log off. 
+ *
+ * @return	TRUE(1) when successful and FALSE(0) when 
+ *			something goes wrong.
+ */
 int speaker_logoff(client_speaker_t *speaker)
 {
 	packet_t *packet = new_packet(QUIT, speaker_strdup(speaker->name), 
@@ -257,6 +334,7 @@ int speaker_logoff(client_speaker_t *speaker)
 
 /*** Helper Functions ****************************************************/
 
+/* strdup defined explicitly, as doesn't exist in ansi libraries */
 char *speaker_strdup(char *s)
 {
 	char *c = malloc(strlen(s) + sizeof(char));
@@ -271,26 +349,33 @@ char *speaker_strdup(char *s)
 	return c;
 }
 
+/* basically just wraps the same function as in packet.c */
 int speaker_send_packet(client_speaker_t *speaker, packet_t *packet)
 {
 	send_packet(packet, speaker->sd);
 	return TRUE;
 }
 
+/* Get a socket and connect it to the server */
 int connect_speaker(client_speaker_t *speaker)
 {
 	int sockfd;
 	struct sockaddr_in addr;
 
+	/* create a new socket */
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("Problem creating socket\n");
 		return FALSE;
 	}
+	
+	/* clear the memory values of addr */
 	memset(&addr, 0, sizeof(addr));
+	/* set the address to the server's ip and port */
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = inet_addr(speaker->hostname);
 	addr.sin_port = htons(speaker->port);
 
+	/* connect */
 	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("Problem connecting to server\n");
 		return FALSE;

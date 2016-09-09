@@ -112,6 +112,15 @@ hashtable_p ht_init(float factor, int init_delta, int delta_diff,
 	return ht;
 }
 
+/**
+ * Update the value of a given key, already in the table.  
+ * If the key is not already in the table, do nothing.
+ *
+ * @param[in] ht:		A pointer to the hashtable in which to update.
+ * @param[in] key:		A pointer to a key to look up with.
+ * @param[in] value:	A pointer to the value that the updated key mast have.
+ * @param[in] val_free:	A function pointer to free the old value with. 
+ */
 void ht_update(hashtable_p ht, void *key, void *value, void (*val_free)(void *)) 
 {
 	unsigned int hash = -1;

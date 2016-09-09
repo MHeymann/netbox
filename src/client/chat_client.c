@@ -6,6 +6,7 @@
 
 /*** Struct Definition ***************************************************/
 
+/* just the outline of the struct used by an instance of a chat client*/
 /*
 typedef struct client {
 	pthread_t *listen_thread;
@@ -24,6 +25,7 @@ typedef struct client {
 char *client_strdup(char *s);
 void broken_connection(chat_client_t *client);
 void read_line(FILE *f, char *line);
+void print_usage();
 
 char ch = '\0';
 
@@ -31,30 +33,44 @@ char ch = '\0';
 
 int main (int argc, char *argv[]) 
 {
-	chat_client_t *client = NULL;
-	char line[1024];
-	char *localhost = "localhost";
+	chat_client_t *client = NULL; /* an instance of a client for methods */
+	char line[MAX_LINE]; /* a buffer for when text is being entered */
+	char *localhost = "localhost"; /* a string for easily comparison */
+	/* strings for setting up the client */
 	char *username = NULL;
 	char *password = NULL;
 	char *hostname = NULL;
 	char *message = NULL;
 	char *to = NULL;
+	/* for strtol error checking */
 	char *endptr;
+	/* the port of the relevant server */
 	int host_port;
 	int ret;
-	int i;
 
-	printf("%s", argv[0]);
-	for (i = 1; i < argc; i++) {
-		printf(" %s", argv[i]);
+	if (argc != 3) {
+		print_usage(argv);
+		exit(1);
 	}
-	printf("\n");
-
 
 	if ((client = new_client()) == NULL) {
 		fprintf(stderr, "Failed to create client\n");
 		exit(1);
 	}
+
+	if (strcmp(localhost, argv[1]) == 0) {
+		hostname = client_strdup("127.0.0.1");
+	} else {
+		hostname = client_strdup(argv[1]);
+	}
+	host_port = strtol(argv[2], &endptr, 10);
+	if (endptr == argv[2]) {
+		printf("Invalid port provided, please enter now: ");
+		goto GIVE_PORT;
+	}
+	goto GIVE_UNAME;
+
+	/* get the relevant data for logging in with */
 ESTABLISH_CONNECTION:
 	while (client->connected_status == FALSE) {
 		printf("Please provide a host address for the server: ");
@@ -94,38 +110,39 @@ GIVE_UNAME:
 		}
 		password = client_strdup(line);
 	
-		
+		/* Flash some details for easy error spotting by user */
 		printf("About to connect to %s:%d\n", hostname, host_port);
 		printf("Login details\n");
 		printf("\tusername: %s\n", username);
 		printf("\tpassword: %s\n", password);
 
+		/* Set to client.  Note that these will be free'd in free_client */
 		client->username = username;
 		client->hostname = hostname;
 		client->hostport = host_port;
 
 	
+		/* Create a speaker */
 		if ((client->speaker = new_client_speaker(username, hostname, host_port)) == NULL) {
 			fprintf(stderr, "Failed to create speaker\n");
 			free_chat_client(client);
-			/* TODO: set memory address values to 0 */
 			free(password);
 			password = NULL;
 			exit(2);
 		}
+		/* 
+		 * Send login details over the new speaker. This entails
+		 * creating a connection and also sending username and password 
+		 */
 		if (!speaker_login(client->speaker, password)) {
 			fprintf(stderr, "Failed to login\n");
 			free_chat_client(client);
 			client = new_client();
-			/* TODO: set memory address values to 0 */
 			free(password);
 			password = NULL;
-			/*
-			exit(3);
-			*/
 		} else {
+			/* success */
 			client->connected_status = TRUE;
-			/* TODO: set memory address values to 0 */
 			free(password);
 			password = NULL;
 		}
@@ -137,9 +154,18 @@ GIVE_UNAME:
 		exit(4);
 	}
 
+	/* 
+	 * this launches a pthread.  
+	 * argument one is a pointer to the thread structure. 
+	 * argument two contains thread attribute info, but may be NULL
+	 * argument three is a pointer to the function to be run by the thread
+	 * argument four is the argument to be passed to argument three's function
+	 */
 	pthread_create(client->listen_thread, NULL, run_client_listener, (void *)client->listener);
 	
 	printf("Please type 'help<enter>' for available options\n");
+	/* this is just a command line interface for the user to control the program
+	 * flow further on */
 	while(TRUE) {
 		printf(">> ");
 		read_line(stdin, line);
@@ -160,13 +186,7 @@ GIVE_UNAME:
 			printf("Type the user name of your recipient: \n");
 			printf(">> ");
 			read_line(stdin, line);
-			/*
-			ret = scanf("%s", line);
-			if (!ret) {
-				printf("some error entering recipient name\n");
-				continue;
-			}
-			*/
+			
 			to = client_strdup(line);
 			if (!to) {
 				printf("some error copying recipient name\n");
@@ -175,15 +195,7 @@ GIVE_UNAME:
 			printf("Type the message to be sent: \n");
 			printf(">> ");
 			read_line(stdin, line);
-			/*
-			ret = scanf("%s", line);
-			if (!ret) {
-				printf("some error entering message\n");
-				free(to);
-				to = NULL;
-				continue;
-			}
-			*/
+			
 			message = client_strdup(line);
 			if (!message) {
 				printf("some error copying message\n");
@@ -204,13 +216,7 @@ GIVE_UNAME:
 			printf("Type the message to be broadcast: \n");
 			printf(">> ");
 			read_line(stdin, line);
-			/*
-			ret = scanf("%s", line);
-			if (!ret) {
-				printf("some error entering message\n");
-				continue;
-			}
-			*/
+			
 			message = client_strdup(line);
 			if (!message) {
 				printf("some error copying message\n");
@@ -228,13 +234,7 @@ GIVE_UNAME:
 			printf("Type the message to be echoed: \n");
 			printf(">> ");
 			read_line(stdin, line);
-			/*
-			ret = scanf("%s", line);
-			if (!ret) {
-				printf("some error entering message\n");
-				continue;
-			}
-			*/
+			
 			message = client_strdup(line);
 			if (!message) {
 				printf("some error copying message\n");
@@ -268,6 +268,7 @@ GIVE_UNAME:
 		}
 	}
 
+	/* cleanup */
 	speaker_logoff(client->speaker);
 	printf("Stopping listener\n");
 	stop_listener(client->listener);
@@ -275,12 +276,18 @@ GIVE_UNAME:
 	pthread_join(*(client->listen_thread), NULL);
 	free_chat_client(client);
 
+	/* normal exit */
 	return 0;
 }
 
 
 /*** Functions ***********************************************************/
 
+/**
+ * Create a new chat client datastructure.
+ *
+ * Assign heapspace and initialize everything to null;
+ */
 chat_client_t *new_client()
 {
 	chat_client_t *client = malloc(sizeof(chat_client_t));
@@ -301,12 +308,9 @@ chat_client_t *new_client()
 	client->hostname = NULL;
 	client->hostport = DEFAULT_PORT;
 
-	/*
-	client->speak_thread = malloc(sizeof(pthread_t));
-	*/
 	client->listen_thread = malloc(sizeof(pthread_t));
 
-	if (/*(!client->speak_thread) ||*/ (!client->listen_thread)) {
+	if (!client->listen_thread) {
 		free_chat_client(client);
 		return NULL;
 	}
@@ -321,6 +325,11 @@ chat_client_t *new_client()
 	return client;
 }
 
+/** 
+ * Free the chat client structure.
+ *
+ * @param[in] client: A pointer to the client structure to be free'd
+ */
 void free_chat_client(chat_client_t *client)
 {
 	if (client->listen_thread) {
@@ -328,12 +337,11 @@ void free_chat_client(chat_client_t *client)
 		free(client->listen_thread);
 		client->listen_thread = NULL;
 	}
-	/*
-	if (client->speak_thread) {
-		free(client->speak_thread);
-		client->speak_thread = NULL;
-	}
-	*/
+	
+	/* Testing in each case whether a given value is non-zero
+	 * avoids double freeing.  This depends heavily on practice of 
+	 * following every free in the program by setting that pointer 
+	 * to NULL, as is done in this procedure as well */
 	if (client->speaker) {
 		free_client_speaker(client->speaker);
 		client->speaker = NULL;
@@ -359,6 +367,16 @@ void free_chat_client(chat_client_t *client)
 	free(client);
 }
 
+/**
+ * Append the text in s to the ouput interface of the client.
+ * This allows for easily expanding this implementation to a gui
+ * interface, and allows easy interaction between the listener and
+ * such a potential gui 
+ *
+ * @param[in] client:	The client structure on which a potential gui
+ *						might be referenced.
+ * @param[in] s:		The string to be displayed
+ */
 void client_append(chat_client_t *client, char *s)
 {
 	if (!client) {
@@ -367,6 +385,14 @@ void client_append(chat_client_t *client, char *s)
 	printf("%s:: %s", client->username, s);
 }
 
+/** 
+ *	Receive a queue of usernames and display them to the standard
+ *	io interface of the client.
+ *
+ *	@param[in] client:	The client structure of the currently running
+ *						client
+ *	@param[in] users_q: The names of the users to be displayed
+ */
 void client_show_online_users(chat_client_t *client, queue_t *users_q)
 {
 	node_t *node = NULL;
@@ -379,6 +405,12 @@ void client_show_online_users(chat_client_t *client, queue_t *users_q)
 
 /*** Helper Functions ****************************************************/
 
+/**
+ * Just a quick string duplication method.  
+ * This is necessitated by the fact that strdup in string.h is not
+ * described in ansi C and this program should be compilable with
+ * that flag set.
+ */
 char *client_strdup(char *s)
 {
 	char *c = malloc(strlen(s) + 1);
@@ -390,10 +422,16 @@ char *client_strdup(char *s)
 	return c;
 }
 
+/**
+ * Read a line and store it in line.
+ */
 void read_line(FILE *f, char *line)
 {
 	int i;
 	for (i = 0; TRUE; i++) {
+		if (i == MAX_LINE - 1) {
+			break;
+		}
 		ch = (char)fgetc(f);
 		switch (ch) {
 			case EOF:
@@ -406,4 +444,15 @@ void read_line(FILE *f, char *line)
 				line[i] = ch;
 		}
 	}
+	line[i] = '\0';
+}
+
+/**
+ * Print how this program should be run.
+ */
+void print_usage(char **argv)
+{
+	printf("\x1b[1;31mUSAGE\x1b[0m: %s hostaddress hostport\n", argv[0]);
+	printf("\thostaddress can be \"localhost\" ");
+	printf("and will convert to 127.0.0.1\n");
 }

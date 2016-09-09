@@ -15,6 +15,12 @@ char *strdup(char *s);
 
 /*** Functions ***********************************************************/
 
+/**
+ * Malloc heap space for a new generic packet.  
+ * All values initialized to NULL, 0 or -1.
+ *
+ * @return The newly allocated space.
+ */
 packet_t *new_empty_packet() 
 {
 	packet_t *packet = NULL;
@@ -38,6 +44,18 @@ packet_t *new_empty_packet()
 	return packet;
 }
 
+/** 
+ * Malloc heap space for a new packet.
+ *
+ * @param[in] code: An integer describing the function of the packet.
+ *					See code.h.
+ * @param[in] name: The username of the sender.
+ * @param[in] data: The message to send.
+ * @param[in] to:	The message to send.
+ *
+ * @return	The memory address of the newly allocated packet, or NULL
+ *			if something goes wrong.
+ */
 packet_t *new_packet(int code, char *name, char *data, char*to)
 {
 	packet_t *packet = NULL;
@@ -76,6 +94,11 @@ packet_t *new_packet(int code, char *name, char *data, char*to)
 	return packet;
 }
 
+/** 
+ * Free the a given packet.
+ * 
+ * @param[in] p: A pointer to the packet to free.
+ */
 void free_packet(void *p)
 {
 	packet_t *packet = (packet_t *)p;
@@ -107,6 +130,13 @@ void free_packet(void *p)
 	free(p);
 }
 
+/**
+ * Set the userlist to the packet, updating values as needed. 
+ *
+ * @param[in] packet:	The packet to set the list to.
+ * @param[in] users:	The queue structure with the names users that
+ *						the packet must carry.
+ */
 void set_user_list(packet_t *p, queue_t *users) 
 {
 	node_t *n = NULL;
@@ -132,21 +162,50 @@ void set_user_list(packet_t *p, queue_t *users)
 	p->users = cusers;
 }
 
+/**
+ * Get the code that describes the function of a given packet.
+ *
+ * @param[in] packet: The packet for which the code is required.
+ * 
+ * @return	The integer value describing the function of the packet,
+ *			as specified in code.h
+ */
 int get_code(packet_t *p) 
 {
 	return p->code;
 }
 
+/**
+ * Set the code of a given packet.
+ *
+ * @param[in] packet:	The packet for which the code must
+ *						be set.
+ * @param[in] code:		The code to set in the packet.
+ */
 void set_code(packet_t *p, int code)
 {
 	p->code = code;
 }
 
+/**
+ * Get the data field of the given packet.
+ *
+ * @param[in] packet:	The packet from which the data must be
+ *						extracted.
+ *
+ * @return A pointer to the data in the packet. 
+ */
 char *get_data(packet_t *p)
 {
 	return p->data;
 }
 
+/**
+ * Set the data field of the given packet.
+ *
+ * @param[in] packet:	The packet from which the data must be set.
+ * @param[in] data:		A pointer to the data to be set.
+ */
 void set_data(packet_t *p, char *data)
 {
 	if (p->data) {
@@ -156,6 +215,13 @@ void set_data(packet_t *p, char *data)
 	p->data = data;
 }
 
+/**
+ * Send a given packet over the socket specified by fd.
+ *
+ * @param[in] packet:	A pointer to the packet to be sent.
+ * @param[in] fd:		A file descriptor of the socket over
+ *						which the packet must be sent.
+ */
 void send_packet(packet_t *packet, int fd)
 {
 	int size;
@@ -177,6 +243,13 @@ void send_packet(packet_t *packet, int fd)
 	free(buffer);
 }
 
+/**
+ * Receive data from a given fd and deserialize the data to a packet.
+ *
+ * @param[in] fd:	A file descriptor of the socket to receive the 
+ *					data over.
+ * @return The new packet that was received.
+ */
 packet_t *receive_packet(int fd) 
 {
 	/* to be continued... */

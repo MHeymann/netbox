@@ -35,6 +35,16 @@ int listener_is_running(client_listener_t *listener);
 
 /*** Functions ***********************************************************/
 
+/**
+ *	Allocate memory for a new listener thread to use.
+ *	All variales are initialized and zeroed.
+ *
+ *	@param[in] sd:		The file descriptor of the socket used.
+ *	@param[in] client:	The chat_client_t instance that this belongs to.
+ *	@param[in] name:	The username of the client.
+ *
+ *	@return A pointer to the memory location allocated for the listener.
+ */
 client_listener_t *new_client_listener(int sd, void *client, char *name)
 {
 	client_listener_t *listener = NULL;
@@ -59,6 +69,11 @@ client_listener_t *new_client_listener(int sd, void *client, char *name)
 	return listener;
 }
 
+/**
+ * Free all the fields in the struct client_listener as needed.
+ * 
+ * @param[in] listener:	A pointer to the listener to free.
+ */
 void free_client_listener(client_listener_t *listener)
 {
 	if (!listener) {
@@ -84,6 +99,12 @@ void free_client_listener(client_listener_t *listener)
 	free(listener);
 }
 
+/**
+ * The method to be run when the listen thread is started.
+ * @param[in] listener: A pointer to the listener keeping info for the thread.
+ *
+ * @return Null in all cases.
+ */
 void *run_client_listener(void *listener)
 {
 	if (!listener) {
@@ -95,6 +116,12 @@ void *run_client_listener(void *listener)
 
 }
 
+/**
+ * Signal to the listener thread that it must stop. 
+ *
+ * @param[in] listener: A pointer to the listener datastructure of the thread
+ * that must be stopped.
+ */
 void stop_listener(client_listener_t *listener)
 {
 	pthread_mutex_lock(listener->listen_mutex);
@@ -113,31 +140,45 @@ void listener_go(client_listener_t *listener)
 	char s[1024];
 	printf("client listener starting up\n");
 
+	/* see if the running flag is still set as true */
 	while (listener_is_running(listener)) {
+		/* clear the listen set */
 		FD_ZERO(&readfds);	
 
+		/* add the sd to the set for listening */
 		FD_SET(listener->sd, &readfds);
 
+		/* Set the delay period.  This must be reset every time,
+		 * as this value gets updated by the system as the time
+		 * is counted off */
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 
+		/* wait for incoming traffic */
 		activity = select(listener->sd + 1, &readfds, NULL, NULL, &tv);
 
+		/* check for errors */
 		if ((activity < 0) && (errno != EINTR)) {
 			printf("Select error\n");
 		}
+		
+		/* if activity is 0, go back to while condition and see if we're
+		 * still running */
 		if (activity == 0) {
 			continue;
 		}
 		
+		/* Quick sanity test */
 		if (!FD_ISSET(listener->sd, &readfds)) {
 			printf("This is very weird, only one sd was set\n");
 			printf("but now after select it is not marked as set\n");
 			continue;
 		}
 
+		/* receive the incoming data as a packet */
 		packet = NULL;
 		packet = receive_packet(listener->sd);
+		/* handle appropriately, based on code in packet */
 		if (!packet) {
 			printf("server went offline\n");
 			break;
@@ -167,6 +208,7 @@ void listener_go(client_listener_t *listener)
 	}
 }
 
+/* strdup is not ansi c, hence defined explicitly here */
 char *listen_strdup(char *s)
 {
 	char *c = malloc(strlen(s) + 1);
@@ -177,6 +219,8 @@ char *listen_strdup(char *s)
 	return c;
 }
 
+/* check the value of the running flag, keeping in mind this might be a race
+ * condition */
 int listener_is_running(client_listener_t *listener) 
 {
 	int ret_val;

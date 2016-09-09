@@ -9,6 +9,8 @@
 #ifdef DEBUG
 #endif
 
+/*** Helper Function Prototypes ******************************************/
+
 int read_int_from_buffer(char *buffer, int *global_index);
 char *read_string_from_buffer(char *buffer, int *global_index, int length);
 int cmp(void *a, void *b);
@@ -18,6 +20,13 @@ void write_string_to_buffer(char *buffer, int *global_index, int length, char *s
 
 /*** Functions ***********************************************************/
 
+/** Take a packet and return a byte buffer representation of it.
+ *
+ * @param[in]  packet:	The packet to serialze.
+ * @param[out] psize:	The size of the serialized packet in bytes.
+ *
+ * @return The byte buffer of the serialized packet.
+ */
 char *serialize(packet_t *packet, int *psize) 
 {
 	int global_index = 0;
@@ -136,6 +145,13 @@ char *serialize(packet_t *packet, int *psize)
 	return buffer;
 }
 
+/**
+ * Take a byte buffer and deserialize it to a packet struct.
+ *
+ * @param[in] bytes: The byte buffer describing the packet.
+ *
+ * @return The packet structure after deserializing.
+ */
 packet_t *deserialize(char *bytes)
 {
 	packet_t *packet;
@@ -202,6 +218,8 @@ packet_t *deserialize(char *bytes)
 
 	return packet;
 }
+
+/*** Helper Functions ****************************************************/
 
 int read_int_from_buffer(char *bytes, int *global_index) 
 {
