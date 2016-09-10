@@ -11,7 +11,8 @@
 #define B_MAX ((long)RIGHT_BITS + (long)MIDDLE_BITS + (long)(15 << 16))
 #define C_MAX ((long)RIGHT_BITS + (long)MIDDLE_BITS)
 
-
+#define TRUE  1
+#define FALSE 0
 
 typedef struct address_alloc *address_alloc_ptr;
 
@@ -20,6 +21,8 @@ unsigned char *allocate_address(address_alloc_ptr);
 address_alloc_ptr new_address_allocator();
 
 void print_address(unsigned char *address);
+
+int is_private_address(unsigned char *address);
 
 #ifdef DEBUG 
 

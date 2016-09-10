@@ -106,6 +106,30 @@ void print_address(unsigned char *address)
 	printf("\n");
 }
 
+int is_private_address(unsigned char *address) 
+{
+	int result;
+
+	if (address[0] == (unsigned char)10) {
+		result = TRUE;
+	} else if (address[0] == (unsigned char)172) {
+		if ((address[1] & (255 - 15)) == (unsigned char)16) {
+			result = TRUE;
+		} else {
+			result = FALSE;
+		}
+	} else if (address[0] == (unsigned char)192) {
+		if (address[1] == (unsigned char)168) {
+			result = TRUE;
+		} else {
+			result = FALSE;
+		}
+	} else {
+		result = FALSE;
+	}
+	return result;
+}
+
 #ifdef DEBUG
 
 void set_counter(address_alloc_ptr addresses, long count) 
@@ -119,5 +143,7 @@ void set_class(address_alloc_ptr addresses, char class)
 }
 
 #endif
+
+
 
 /*** Helper Functions ****************************************************/
