@@ -45,3 +45,4 @@
 
 run_server
 run_client
+test_address_alloc
