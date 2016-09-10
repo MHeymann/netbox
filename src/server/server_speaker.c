@@ -21,6 +21,13 @@ void speaker_go(server_speaker_t *speaker);
 
 /*** Functions ***********************************************************/
 
+/**
+ * Allocate heap space for the struct.
+ *
+ * @param[in] users: The users currently online.
+ *
+ * @return The new data structure.
+ */
 server_speaker_t *new_server_speaker(users_t *users)
 {
 	server_speaker_t *speaker = NULL;
@@ -60,6 +67,11 @@ server_speaker_t *new_server_speaker(users_t *users)
 	return speaker;
 }
 
+/**
+ * Free the struct.
+ *
+ * @param[in] speaker: the struct to be free'd.
+ */
 void server_speaker_free(server_speaker_t *speaker)
 {
 
@@ -86,6 +98,13 @@ void server_speaker_free(server_speaker_t *speaker)
 	free(speaker);
 }
 
+/**
+ * Add a packet to the internal queue to be processed by the speaker.
+ *
+ * @param[in] speaker:	The speaker thread's data structure that contains
+ *						the queue.
+ * @param[in] packet:	The packet datastructure that must be processed.
+ */
 void add_packet_to_queue(server_speaker_t *speaker, packet_t *packet)
 {
 	pthread_mutex_lock(speaker->queue_lock);
@@ -95,7 +114,11 @@ void add_packet_to_queue(server_speaker_t *speaker, packet_t *packet)
 	sem_post(speaker->queue_sem);
 }
 
-
+/** 
+ * Send a list of online users to all online users.
+ *
+ * @param[in] speaker:	The speaker used by this thread.
+ */
 void push_user_list(server_speaker_t *speaker)
 {
 	packet_t *packet = NULL;
@@ -115,7 +138,12 @@ void push_user_list(server_speaker_t *speaker)
 	free_queue(names);
 }
 
-
+/**
+ * Send a packet to all online users.
+ *
+ * @param[in] speaker:	The speaker sending packets out.
+ * @param[in] packet:	The packet to be broadcast.
+ */
 void broadcast(server_speaker_t *speaker, packet_t *packet)
 {
 	packet_t *copy;
@@ -132,6 +160,12 @@ void broadcast(server_speaker_t *speaker, packet_t *packet)
 	}
 }
 
+/**
+ * The process to be run when creating the thread.
+ *
+ * @param[in] speaker:	The struct to be used for overhead by the
+ *						speaker thread.
+ */
 void *speaker_run(void *s) 
 {
 	if (!s) {
@@ -142,6 +176,11 @@ void *speaker_run(void *s)
 	return NULL;
 }
 
+/**
+ * Signal to the speaker thread to stop, breaking out of it's while loop.
+ * 
+ * @param[in] speaker: The struct to administer overhead.
+ */
 void speaker_stop(server_speaker_t *speaker)
 {
 	pthread_mutex_lock(speaker->status_lock);
@@ -149,7 +188,11 @@ void speaker_stop(server_speaker_t *speaker)
 	pthread_mutex_unlock(speaker->status_lock);
 	sem_post(speaker->queue_sem);
 }
-
+/**
+ * Check whether the speaker thread is currently marked as running.
+ *
+ * @param[in] speaker: The struct to administer overhead.
+ */
 int speaker_running(server_speaker_t *speaker)
 {
 	int status;
@@ -171,6 +214,7 @@ int cmp_dummy(void *a, void *b)
 	}
 }
 
+/* ansi */
 char *speak_strdup(char *s)
 {
 	int i = 0, j = 0;
@@ -179,11 +223,14 @@ char *speak_strdup(char *s)
 	return c;
 }
 
+/* The workhorse that does the work */
 void speaker_go(server_speaker_t *speaker)
 {
 	packet_t *packet = NULL;
 	queue_t *online_users = NULL;
 	while(TRUE) {
+		/* wait for the semaphore to be increased, indicating 
+		 * new activity to be processed */
 		sem_wait(speaker->queue_sem);
 		if (!speaker_running(speaker)) {
 			break;
@@ -194,6 +241,7 @@ void speaker_go(server_speaker_t *speaker)
 		packet = (packet_t *)pop_first(speaker->q);
 		pthread_mutex_unlock(speaker->queue_lock);
 
+		/* handle packet according to it's code */
 		if (packet->code == SEND) {
 			printf("Sending message: %s -> %s %s\n", packet->name, packet->to, packet->data);
 		} else if (packet->code == GET_ULIST) {

@@ -32,6 +32,19 @@ char *listen_strdup(char *s);
 
 /*** Functions ***********************************************************/
 
+/**
+ * Allocate heap space for the server_listener_t data structure.
+ * Set all fields to the corresponding values.
+ *
+ * @param[in] ports:		The ports on which to listen.
+ * @param[in] port_count:	The number of ports in the previous argument.
+ * @param[in] users:		A pointer to the users data structure.
+ * @param[in] speaker:		A pointer to the speaker datastructure, 
+ *							used by the speaker thread.
+ *
+ * @return A pointer to the newly allocated datastructure. NULL on 
+ * failure.
+ */
 server_listener_t *new_server_listener(int *ports, int port_count, users_t *users, 
 		server_speaker_t *speaker)
 {
@@ -75,6 +88,11 @@ server_listener_t *new_server_listener(int *ports, int port_count, users_t *user
 	return listener;
 }
 
+/**
+ * Free the data structure allocated by new_server_listener.
+ * 
+ * @param[in] listener: The listener structure to be free'd.
+ */
 void server_listener_free(server_listener_t *listener)
 {
 	if (!listener) {
@@ -104,6 +122,13 @@ void server_listener_free(server_listener_t *listener)
 	free(listener);
 }
 
+/**
+ * The default procedure to be run by the listener thread.
+ *
+ * @param[in] listener: The struct listener pointer to be used by the thread.
+ *
+ * @return NULL.
+ */
 void *listener_run(void *listener) 
 {
 	if (!listener) {
@@ -113,6 +138,13 @@ void *listener_run(void *listener)
 	return NULL;
 }
 
+/**
+ * Signal to the listening thread stop, causing it to break out of the 
+ * while loop. 
+ *
+ * @param[in] listener: The listener datastructure being used by the 
+ *						thread.
+ */
 void listener_stop(server_listener_t *listener)
 {
 	pthread_mutex_lock(listener->status_lock);
@@ -120,6 +152,12 @@ void listener_stop(server_listener_t *listener)
 	pthread_mutex_unlock(listener->status_lock);
 }
 
+/**
+ * Check if the thread is marked as running.
+ * 
+ * @param[in] listener: The listener datastructure being used by the 
+ *						thread.
+ */
 int listener_running(server_listener_t *listener)
 {
 	int status;
@@ -131,6 +169,7 @@ int listener_running(server_listener_t *listener)
 
 /*** Helper Functions ****************************************************/
 
+/* the actual workhorse function */
 void listener_go(server_listener_t *listener)
 {
 	int master_socket = -1, new_socket = -1, i = 0;
@@ -151,8 +190,7 @@ void listener_go(server_listener_t *listener)
 
 	port_count = listener->port_count;
 
-
-
+	/* bind to the different ports for listening */
 	for (i = 0; i < port_count; i++) {
 	/* Create master sockets */
 		if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) <= 0) {
@@ -323,6 +361,7 @@ void listener_go(server_listener_t *listener)
 	}
 }
 
+/* at this point not implemented */
 int check_user_password(char *name, char *pw)
 {
 	if (name == pw) {
@@ -332,7 +371,7 @@ int check_user_password(char *name, char *pw)
 	}
 }
 
-
+/* Ansi doesn't define strdup */
 char *listen_strdup(char *s)
 {
 	char *c = malloc(strlen(s) + 1);

@@ -7,10 +7,13 @@
 #include "server_listener.h"
 #include "server_speaker.h"
 
-
 char ch = '\0';
 
+/*** Helper Function Prototypes ******************************************/
+
 void read_line(FILE *f, char *line);
+
+/*** The Main Routine ****************************************************/
 
 int main (void) 
 {
@@ -27,21 +30,25 @@ int main (void)
 
 	printf("Starting up server\n");
 
+	/* users is a hashset structure for keeping track of connected users */
+	/* it maps socket file descriptors to usernames and vice versa */
 	users = new_users();
+	
+	/* data structures for the threads that listen for incomming data */
+	/* and connections and sends out data to the various different users */
 	speaker = new_server_speaker(users);
 	listener = new_server_listener(ports, 1, users, speaker);
 
+	/* Launch the two threads */
+	/* args are: the thread, unused attribute, start function, and argument for
+	 * start function */
 	pthread_create(&listen_thread, NULL, listener_run, (void *)listener);
 	pthread_create(&speak_thread, NULL, speaker_run, (void *)speaker);
 
 	printf("Server running\n");
 
+	/* handle input */
 	while(TRUE) {
-		/*
-		if (!scanf("%s", line)) {
-			printf("Something weird in scanf\n");		
-		}
-		*/
 		read_line(stdin, line);
 		if (strcmp(line, "quit") == 0) {
 			break;
@@ -60,8 +67,11 @@ int main (void)
 		}
 	}
 
+	/* shut down server */
+	/* signal stop to threads to break out of while loops*/
 	listener_stop(listener);
 	speaker_stop(speaker);
+	/* join(stop) threads */
 	printf("Joining speaker\n");
 	pthread_join(speak_thread, NULL);
 	printf("Joined listener\n");
@@ -69,6 +79,7 @@ int main (void)
 	pthread_join(listen_thread, NULL);
 	printf("Joined listener\n");
 
+	/* Free all datastructures */
 	free_users(users);
 	users = NULL;
 	server_listener_free(listener);
@@ -81,6 +92,10 @@ int main (void)
 	return 0;
 }
 
+/*** Helper Functions ****************************************************/
+
+/* A simple scanner function, so that lines with more than one word 
+ * can be read */
 void read_line(FILE *f, char *line)
 {
 	int i;
