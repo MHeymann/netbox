@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 
@@ -23,8 +24,45 @@ char *strdup(char *s);
  */
 packet_t *new_empty_packet() 
 {
+	int i;
 	packet_t *packet = NULL;
 	packet = malloc(sizeof(packet_t));
+
+	if (!packet) {
+		return NULL;
+	}
+
+	/* preamble */
+	for (i = 0; i < 7; i++) {
+		packet->eth_preable[i] = (unsigned char)170;
+	}
+	/* SFD - Start frame delimiter */
+	packet->eth_preable[7] = (unsigned char)171;
+
+	bzero(packet->dst_mac, 6);
+	bzero(packet->src_mac, 6);
+	packet->ethernet_type[0] = (unsigned char)16;
+	packet->ethernet_type[1] = '\0';
+
+	packet->version_ihl = '\0';
+	packet->version_ihl += (unsigned char)64;
+	packet->version_ihl += (unsigned char)5;
+	packet->dscp_ecn = (unsigned char)2;
+	packet->total_length[0] = (unsigned char)0;
+	packet->total_length[1] = (unsigned char)20;
+
+	packet->identification[0] = '\0';
+	packet->identification[1] = '\0';
+	packet->flags_fragmentoffset[0] = '\0';
+	packet->flags_fragmentoffset[1] = '\0';
+
+	packet->time_to_live = (unsigned char)255;
+	packet->protocol = (unsigned char)6;
+	packet->headerchecksum[0] = '\0';
+	packet->headerchecksum[1] = '\0';
+
+	bzero(packet->src_ip, 4);
+	bzero(packet->dst_ip, 4);
 
 	packet->code = -1;
 
@@ -59,7 +97,13 @@ packet_t *new_empty_packet()
 packet_t *new_packet(int code, char *name, char *data, char*to)
 {
 	packet_t *packet = NULL;
+	packet = new_empty_packet();
+	/*
 	packet = malloc(sizeof(packet_t));
+	*/
+	if (!packet) {
+		return NULL;
+	}
 
 	packet->code = code;
 

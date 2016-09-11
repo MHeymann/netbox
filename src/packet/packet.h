@@ -5,20 +5,39 @@
 /*** struct description **************************************************/
 
 typedef struct packet {
-	int code;			/* The code specifying the packet function. */
+	
+	unsigned char eth_preable[8];
+	unsigned char dst_mac[6];
+	unsigned char src_mac[6];
+	unsigned char ethernet_type[2];
 
+	unsigned char version_ihl;
+	unsigned char dscp_ecn;
+	unsigned char total_length[2];
+
+	unsigned char identification[2];
+	unsigned char flags_fragmentoffset[2];
+
+	unsigned char time_to_live;
+	unsigned char protocol;
+	unsigned char headerchecksum[2];
+
+	unsigned char dst_ip[4];
+	unsigned char src_ip[4];
+
+	int code;			/* The code specifying the packet function. */
 	int name_len;		/* The number of characters in the name field */
 	char *name;			/* The username of the sending client */
-
 	int data_len;		/* The number of characters in the data field */ 
 	char *data;			/* The data to be sent in the packet */
-
 	int to_len;			/* The number of characters in the to field */
 	char *to;			/* The username of the receiving client */
-
 	int list_len;		/* The number of names in users */
 	int list_size;		/* The number of bytes taken up by the list */
 	queue_t *users;		/* The names to be carried in this packet */
+
+	unsigned char frame_check_sequence[4];
+	/* End of Frame */
 
 } packet_t;
 
