@@ -17,6 +17,7 @@ int cmp(void *a, void *b);
 
 void write_int_to_buffer(char *buffer, int *global_index, int integer);
 void write_string_to_buffer(char *buffer, int *global_index, int length, char *string);
+void write_n_bytes_to_buffer(char *buffer, int *global_index, int n, unsigned char *bytes);
 
 /*** Functions ***********************************************************/
 
@@ -32,66 +33,66 @@ char *serialize(packet_t *packet, int *psize)
 	int global_index = 0;
 	int len;
 	int size = 0;
+	int header_size = 0;
 	char *buffer = NULL;
 	node_t *n = NULL;
 
-	size += sizeof(int);
-#ifdef DEBUG
-	size += sizeof(int);
-	if (packet->name) {
-		size += strlen(packet->name) * 2;
-	}
-	size += sizeof(int);
-	if (packet->data) {
-		size += strlen(packet->data) * 2;
-	}
-	size += sizeof(int);
-	if (packet->to) {
-		size += strlen(packet->to) * 2;
-	}
-	/*
-	size += get_node_count(packet->users) * sizeof(int);
-	*/
-	size += sizeof(int);
-	if (get_node_count(packet->users)) {
-		for (n = packet->users->head; n; n = n->next) {
-			size += sizeof(int);
-			if (n->data) {
-				size += strlen((char *)n->data) * 2;
-			} else {
-				fprintf(stderr, "fault in queue nodes!!\n");
-			}
-		}
-	}
-#else
-	size += sizeof(int);
-	size += packet->name_len * 2;
-	size += sizeof(int);
-	size += packet->data_len * 2;
-	size += sizeof(int);
-	size += packet->to_len * 2;
-	size += sizeof(int);
-	size += packet->list_size;
-#endif
-
-	/* TODO: reevaluate the correctness here */
-	*psize = size/* + sizeof(int)*/;
-
-	buffer = malloc(size + sizeof(int));
-	write_int_to_buffer(buffer, &global_index, packet->code);
-	/*
-	iptr = (int *)(buffer + global_index);
-	*iptr = htonl(size);
-	global_index += sizeof(int);
-	*/
+	/* headers: ethernet + tcp */
+	header_size = 22 + 20;
 	
 
-#ifdef DEBUG
-	if ((packet->name) && (packet->name_len != (int)strlen(packet->name))) {
-		fprintf(stderr, "fault with length parameters of packet. fixing but find issue\n");
-		packet->name_len = strlen(packet->name);
+	/* payload sizes */
+	/* code */
+	size += sizeof(int);
+	/* name */
+	size += sizeof(int);
+	size += packet->name_len * 2;
+	/* data */
+	size += sizeof(int);
+	size += packet->data_len * 2;
+	/* to */
+	size += sizeof(int);
+	size += packet->to_len * 2;
+	/* list */
+	size += sizeof(int);
+	size += packet->list_size;
+
+	*psize = size + sizeof(int) + header_size;
+
+	/*
+	buffer = malloc(size + sizeof(int));
+	*/
+	buffer = malloc(header_size + sizeof(int) + size);
+	if (!buffer) {
+		return NULL;
 	}
-#endif
+
+
+	/* TODO: work out checksum, etc */
+	/* header */
+	write_n_bytes_to_buffer(buffer, &global_index, 8, packet->header.eth_preamble);
+	write_n_bytes_to_buffer(buffer, &global_index, 6, packet->header.dst_mac);
+	write_n_bytes_to_buffer(buffer, &global_index, 6, packet->header.src_mac);
+	write_n_bytes_to_buffer(buffer, &global_index, 2, packet->header.ethernet_type);
+	
+	write_n_bytes_to_buffer(buffer, &global_index, 1, &(packet->header.version_ihl));
+	write_n_bytes_to_buffer(buffer, &global_index, 1, &(packet->header.dscp_ecn));
+	write_n_bytes_to_buffer(buffer, &global_index, 2, packet->header.total_length);
+
+	write_n_bytes_to_buffer(buffer, &global_index, 2, packet->header.identification);
+	write_n_bytes_to_buffer(buffer, &global_index, 2, packet->header.flags_fragmentoffset);
+
+	write_n_bytes_to_buffer(buffer, &global_index, 1, &(packet->header.time_to_live));
+	write_n_bytes_to_buffer(buffer, &global_index, 1, &(packet->header.protocol));
+	write_n_bytes_to_buffer(buffer, &global_index, 2, packet->header.headerchecksum);
+
+	write_n_bytes_to_buffer(buffer, &global_index, 4, packet->header.dst_ip);
+	write_n_bytes_to_buffer(buffer, &global_index, 4, packet->header.src_ip);
+
+	write_int_to_buffer(buffer, &global_index, size);
+
+	write_int_to_buffer(buffer, &global_index, packet->code);
+
 	if (packet->name) {
 		write_int_to_buffer(buffer, &global_index, packet->name_len);
 		write_string_to_buffer(buffer, &global_index, packet->name_len, packet->name);
@@ -99,12 +100,6 @@ char *serialize(packet_t *packet, int *psize)
 		write_int_to_buffer(buffer, &global_index, 0);
 	}
 
-#ifdef DEBUG
-	if ((packet->data) && (packet->data_len != (int)strlen(packet->data))) {
-		fprintf(stderr, "fault with length parameters of packet. fixing but find issue\n");
-		packet->data_len = strlen(packet->data);
-	}
-#endif
 	if (packet->data) {
 		write_int_to_buffer(buffer, &global_index, packet->data_len);
 		write_string_to_buffer(buffer, &global_index, packet->data_len, packet->data);
@@ -112,12 +107,6 @@ char *serialize(packet_t *packet, int *psize)
 		write_int_to_buffer(buffer, &global_index, 0);
 	}
 
-#ifdef DEBUG
-	if ((packet->to) && (packet->to_len != (int)strlen(packet->to))) {
-		fprintf(stderr, "fault with length parameters of packet. fixing but find issue\n");
-		packet->to_len = strlen(packet->to);
-	}
-#endif
 	if (packet->to) {
 		write_int_to_buffer(buffer, &global_index, packet->to_len);
 		write_string_to_buffer(buffer, &global_index, packet->to_len, packet->to);
@@ -125,12 +114,6 @@ char *serialize(packet_t *packet, int *psize)
 		write_int_to_buffer(buffer, &global_index, 0);
 	}
 
-#ifdef DEBUG
-	if ((packet->users) && (packet->list_len != get_node_count(packet->users))) {
-		fprintf(stderr, "fault with length parameters of packet. fixing but find issue\n");
-		packet->list_len = get_node_count(packet->users);
-	}
-#endif
 	if (packet->users) {
 		write_int_to_buffer(buffer, &global_index, packet->list_len);
 		for (n = packet->users->head; n; n = n->next) {
@@ -152,7 +135,7 @@ char *serialize(packet_t *packet, int *psize)
  *
  * @return The packet structure after deserializing.
  */
-packet_t *deserialize(char *bytes)
+packet_t *deserialize(char *bytes, p_header_t *header)
 {
 	packet_t *packet;
 	int global_index = 0;
@@ -201,6 +184,7 @@ packet_t *deserialize(char *bytes)
 	}
 
 	packet = new_empty_packet();
+	packet->header = *header;
 	packet->code = code;
 
 	packet->name_len = name_len;
@@ -280,4 +264,16 @@ void write_string_to_buffer(char *buffer, int *global_index, int length, char *s
 		*/
 	}
 	*global_index += i * 2;
+}
+
+void write_n_bytes_to_buffer(char *buffer, int *global_index, int n, unsigned char *bytes)
+{
+	int i;
+	unsigned char *ch;
+	for (i = 0; i < n; i++) {
+		ch = (unsigned char *)(buffer + *global_index + i);
+		*ch = bytes[i];
+	}
+	*global_index += i;
+
 }

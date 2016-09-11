@@ -19,6 +19,6 @@ char *serialize(packet_t *packet, int *psize);
  *
  * @return The packet structure after deserializing.
  */
-packet_t *deserialize(char *bytes); 
+packet_t *deserialize(char *bytes, p_header_t *header); 
 
 #endif

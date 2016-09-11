@@ -34,35 +34,35 @@ packet_t *new_empty_packet()
 
 	/* preamble */
 	for (i = 0; i < 7; i++) {
-		packet->eth_preable[i] = (unsigned char)170;
+		packet->header.eth_preamble[i] = (unsigned char)170;
 	}
 	/* SFD - Start frame delimiter */
-	packet->eth_preable[7] = (unsigned char)171;
+	packet->header.eth_preamble[7] = (unsigned char)171;
 
-	bzero(packet->dst_mac, 6);
-	bzero(packet->src_mac, 6);
-	packet->ethernet_type[0] = (unsigned char)16;
-	packet->ethernet_type[1] = '\0';
+	bzero(packet->header.dst_mac, 6);
+	bzero(packet->header.src_mac, 6);
+	packet->header.ethernet_type[0] = (unsigned char)16;
+	packet->header.ethernet_type[1] = '\0';
 
-	packet->version_ihl = '\0';
-	packet->version_ihl += (unsigned char)64;
-	packet->version_ihl += (unsigned char)5;
-	packet->dscp_ecn = (unsigned char)2;
-	packet->total_length[0] = (unsigned char)0;
-	packet->total_length[1] = (unsigned char)20;
+	packet->header.version_ihl = '\0';
+	packet->header.version_ihl += (unsigned char)64;
+	packet->header.version_ihl += (unsigned char)5;
+	packet->header.dscp_ecn = (unsigned char)2;
+	packet->header.total_length[0] = (unsigned char)0;
+	packet->header.total_length[1] = (unsigned char)20;
 
-	packet->identification[0] = '\0';
-	packet->identification[1] = '\0';
-	packet->flags_fragmentoffset[0] = '\0';
-	packet->flags_fragmentoffset[1] = '\0';
+	packet->header.identification[0] = '\0';
+	packet->header.identification[1] = '\0';
+	packet->header.flags_fragmentoffset[0] = '\0';
+	packet->header.flags_fragmentoffset[1] = '\0';
 
-	packet->time_to_live = (unsigned char)255;
-	packet->protocol = (unsigned char)6;
-	packet->headerchecksum[0] = '\0';
-	packet->headerchecksum[1] = '\0';
+	packet->header.time_to_live = (unsigned char)255;
+	packet->header.protocol = (unsigned char)6;
+	packet->header.headerchecksum[0] = '\0';
+	packet->header.headerchecksum[1] = '\0';
 
-	bzero(packet->src_ip, 4);
-	bzero(packet->dst_ip, 4);
+	bzero(packet->header.src_ip, 4);
+	bzero(packet->header.dst_ip, 4);
 
 	packet->code = -1;
 
@@ -272,14 +272,22 @@ void send_packet(packet_t *packet, int fd)
 	int write_bytes;
 	int i;
 	char *buffer = NULL;
+	/*
 	char sbuffer[4];
+	*/
+	/*
 	int *iptr = (int *)sbuffer;
+	*/
 
 	buffer = serialize(packet, &size);
 	
+	/*
 	*iptr = htonl(size);
+	*/
 
+	/*
 	write_bytes = write(fd, sbuffer, 4);
+	*/
 	for (i = 0; i < size;) {
 		write_bytes = write(fd, (buffer + i), size - i);
 		i += write_bytes;
@@ -298,6 +306,7 @@ packet_t *receive_packet(int fd)
 {
 	/* to be continued... */
 	packet_t *packet = NULL;
+	p_header_t header;
 	int size = 0;
 	int r = 0;
 	int i = 0;
@@ -305,8 +314,27 @@ packet_t *receive_packet(int fd)
 	char *b = (char *)sizebuffer;
 	int *intp;
 
-	r = read(fd, (void *)b, sizeof(int));
+	r = read(fd, (void *)(header.eth_preamble), 8);
+	r = read(fd, (void *)(header.dst_mac), 6);
+	r = read(fd, (void *)(header.src_mac), 6);
+	r = read(fd, (void *)(header.ethernet_type), 2);
 
+	r = read(fd, (void *)(&header.version_ihl), 1);
+	r = read(fd, (void *)(&header.dscp_ecn), 1);
+	r = read(fd, (void *)(header.total_length), 2);
+
+	r = read(fd, (void *)(header.identification), 2);
+	r = read(fd, (void *)(header.flags_fragmentoffset), 2);
+
+	r = read(fd, (void *)(&header.time_to_live), 1);
+	r = read(fd, (void *)(&header.protocol), 1);
+	r = read(fd, (void *)(header.headerchecksum), 2);
+	
+	r = read(fd, (void *)(header.dst_ip), 4);
+	r = read(fd, (void *)(header.src_ip), 4);
+
+	r = read(fd, (void *)(b), sizeof(int));
+	
 	if (r == 0) {
 #ifdef PDEBUG
 		printf("0 disconnect*************\n");
@@ -357,7 +385,7 @@ packet_t *receive_packet(int fd)
 		}
 	}
 
-	packet = deserialize(b);
+	packet = deserialize(b, &header);
 	free(b);
 
 	return packet;

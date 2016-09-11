@@ -4,9 +4,8 @@
 
 /*** struct description **************************************************/
 
-typedef struct packet {
-	
-	unsigned char eth_preable[8];
+typedef struct p_headder {
+	unsigned char eth_preamble[8];
 	unsigned char dst_mac[6];
 	unsigned char src_mac[6];
 	unsigned char ethernet_type[2];
@@ -24,6 +23,11 @@ typedef struct packet {
 
 	unsigned char dst_ip[4];
 	unsigned char src_ip[4];
+} p_header_t;
+
+typedef struct packet {
+	
+	p_header_t header;
 
 	int code;			/* The code specifying the packet function. */
 	int name_len;		/* The number of characters in the name field */
