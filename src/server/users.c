@@ -91,6 +91,7 @@ void users_send_packet(users_t *users, packet_t *packet)
 
 	pthread_mutex_lock(users->hs_protect);
 	fd = ip_get_fd(users->ips, packet->header.dst_ip);
+	printf("%d was found in users.c\n", fd);
 	if (!fd) {
 		pthread_mutex_unlock(users->hs_protect);
 		fprintf(stderr, "Failed to send message in users.c!!!\n");
@@ -179,7 +180,10 @@ int login_connection(users_t *users, int fd, unsigned char *ip)
 		pthread_mutex_unlock(users->hs_protect);
 		return 0;
 	}
+	
+
 	fd_hashset_update(users->sockets, fd, ip);
+
 
 	pthread_mutex_unlock(users->hs_protect);
 	return 1;

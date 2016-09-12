@@ -431,7 +431,7 @@ void client_append(chat_client_t *client, char *s)
 	if (!client) {
 		return;
 	}
-	printf("%s:: %s", client->client_ip, s);
+	printf("display:: %s",  s);
 }
 
 /** 

@@ -131,7 +131,7 @@ void free_speaker(client_speaker_t *speaker)
  */
 void get_online_names(client_speaker_t *speaker)
 {
-	packet_t *packet = new_packet(GET_ULIST, speaker_ipdup(speaker->client_ip), NULL, NULL);
+	packet_t *packet = new_packet(GET_ULIST, speaker->client_ip, NULL, NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send packet to request user list\n");
@@ -151,8 +151,8 @@ void get_online_names(client_speaker_t *speaker)
  */
 int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip)
 {
-	packet_t *packet = new_packet(SEND, speaker_ipdup(speaker->client_ip), 
-			speaker_strdup(s), speaker_ipdup(dst_ip));
+	packet_t *packet = new_packet(SEND, speaker->client_ip, 
+			speaker_strdup(s), dst_ip);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send message packet\n");
@@ -177,7 +177,7 @@ int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip)
  */
 int echo_string(client_speaker_t *speaker, char *s)
 {
-	packet_t *packet = new_packet(ECHO, speaker_ipdup(speaker->client_ip), 
+	packet_t *packet = new_packet(ECHO, speaker->client_ip, 
 			speaker_strdup(s), NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
@@ -204,7 +204,7 @@ int echo_string(client_speaker_t *speaker, char *s)
  */
 int broadcast_string(client_speaker_t *speaker, char *s)
 {
-	packet_t *packet = new_packet(BROADCAST, speaker_ipdup(speaker->client_ip), 
+	packet_t *packet = new_packet(BROADCAST, speaker->client_ip, 
 			speaker_strdup(s), NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
@@ -254,7 +254,7 @@ int speaker_login(client_speaker_t *speaker, char *pw)
 	}
 	printf("Connected\n");
 
-	packet = new_packet(LOGIN, speaker_ipdup(speaker->client_ip), 
+	packet = new_packet(LOGIN, speaker->client_ip, 
 			speaker_strdup(pw), NULL);
 
 	printf("Sending log in packet\n");
@@ -314,7 +314,7 @@ int speaker_login(client_speaker_t *speaker, char *pw)
  */
 int speaker_logoff(client_speaker_t *speaker)
 {
-	packet_t *packet = new_packet(QUIT, speaker_ipdup(speaker->client_ip), 
+	packet_t *packet = new_packet(QUIT, speaker->client_ip, 
 			NULL, NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {

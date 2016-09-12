@@ -290,24 +290,18 @@ unsigned long hash_fd(void *key, unsigned int size)
  */
 int cmp_fd_strings(void *a, void *b) 
 {
-	int i;
 	unsigned char *A = (unsigned char *)a;
 	unsigned char *B = (unsigned char *)b;
-	unsigned long A_val = 0, B_val = 0;
+	int i;
 
 	for (i = 0; i < 4; i++) {
-		A_val += (A_val << 8) + (unsigned long)A[i];
+		if (A[i] == B[i]) {
+			continue;
+		} else {
+			return ((int)A[i] - (int)B[i]);
+		}
 	}
-	for (i = 0; i < 4; i++) {
-		B_val += (B_val << 8) + (unsigned long)B[i];
-	}
-	if (A_val > B_val) {
-		return 1;
-	} else if (A_val < B_val) {
-		return -1;
-	} else {
-		return 0;
-	}
+	return 0;
 }
 
 

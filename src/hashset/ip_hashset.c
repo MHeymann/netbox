@@ -28,7 +28,7 @@ typedef struct ip_hashset {
 
 unsigned long hash_ip(void *key, unsigned int size);
 int cmp_ips(void *a, void *b);
-void s_val2str(void *key, void *val, char *buffer);
+void ip_val2str(void *key, void *val, char *buffer);
 void s_dud_free(void *);
 unsigned char *ipdup(unsigned char *s);
 void *copy_ip_key(void *key);
@@ -102,6 +102,7 @@ int ip_hashset_insert(ip_hashset_ptr hs, unsigned char *ipkey, int fdvalue)
 
 	fdl = fdvalue;
 	insert_status = ht_insert(hs->ht, (void *)ipcopy, (void *)fdl);
+
 	if (insert_status) {
 		switch (insert_status) {
 			case 1:
@@ -203,7 +204,7 @@ int ip_hashset_content_count(ip_hashset_ptr hs)
  */
 void print_ip_hashset(ip_hashset_ptr hs)
 {
-	print_ht(hs->ht, s_val2str);	
+	print_ht(hs->ht, ip_val2str);	
 }
 
 /**
@@ -218,7 +219,7 @@ void free_ip_hashset(ip_hashset_ptr hs)
 	free(hs);
 }
 
-queue_t *shs_get_keys(ip_hashset_t *s_hs)
+queue_t *iphs_get_keys(ip_hashset_t *s_hs)
 {
 	return get_keys(s_hs->ht, copy_ip_key, cmp_ips, free);
 }
@@ -313,23 +314,16 @@ int cmp_ips(void *a, void *b)
 {
 	unsigned char *A = (unsigned char *)a;
 	unsigned char *B = (unsigned char *)b;
-	unsigned long A_val;
-	unsigned long B_val;
 	int i;
 
 	for (i = 0; i < 4; i++) {
-		A_val = (A_val << 8) + (unsigned long)A[i];
+		if (A[i] == B[i]) {
+			continue;
+		} else {
+			return ((int)A[i] - (int)B[i]);
+		}
 	}
-	for (i = 0; i < 4; i++) {
-		B_val = (B_val << 8) + (unsigned long)B[i];
-	}
-	if (A > B) {
-		return 1;
-	} else if (A < B) {
-		return -1;
-	} else {
-		return 0;
-	}
+	return 0;
 }
 
 

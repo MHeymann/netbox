@@ -29,6 +29,7 @@
 void listener_go(server_listener_t *listener);
 int check_user_password(unsigned char *name, char *pw);
 char *listen_strdup(char *s);
+unsigned char *listen_ipdup(unsigned char *s);
 
 unsigned char null_address[4] = {
 	'\0',
@@ -333,17 +334,18 @@ void listener_go(server_listener_t *listener)
 				} else if (packet->code == BROADCAST) {
 					broadcast(listener->speaker, packet);
 				} else if (packet->code == LOGIN) {
+					printf("got login packet\n");
 					if ((check_user_password(packet->header.src_ip, packet->data)) && 
 							login_connection(listener->users, sd, packet->header.src_ip)) {
 						push_user_list(listener->speaker);
 						/* !!!!!!!!!!!!!! */
-						p = new_packet(SEND, listen_ipdup(null_address), listen_strdup("accept"), listen_ipdup(packet->header.src_ip));
+						p = new_packet(SEND, null_address, listen_strdup("accept"), packet->header.src_ip);
 						send_packet(p, sd);
 						free_packet(p);
 						p = NULL;
 					} else {
 						/* !!!!!!!!!!!!!! */
-						p = new_packet(SEND, listen_ipdup(null_address), listen_strdup("denial"), listen_ipdup(packet->header.src_ip));
+						p = new_packet(SEND, null_address, listen_strdup("denial"), packet->header.src_ip);
 						send_packet(p, sd);
 						free_packet(p);
 						p = NULL;
@@ -373,7 +375,7 @@ void listener_go(server_listener_t *listener)
 /* at this point not implemented */
 int check_user_password(unsigned char *name, char *pw)
 {
-	if (name == pw) {
+	if ((char *)name == pw) {
 		return TRUE;
 	} else {
 		return TRUE;
