@@ -243,7 +243,16 @@ void speaker_go(server_speaker_t *speaker)
 
 		/* handle packet according to it's code */
 		if (packet->code == SEND) {
-			printf("Sending message: %s -> %s %s\n", packet->name, packet->to, packet->data);
+			printf("Sending message: %d.%d.%d.%d -> %d.%d.%d.%d %s\n", 
+					(int)packet->header.src_ip[0], 
+					(int)packet->header.src_ip[1], 
+					(int)packet->header.src_ip[2], 
+					(int)packet->header.src_ip[3], 
+					(int)packet->header.dst_ip[0], 
+					(int)packet->header.dst_ip[1], 
+					(int)packet->header.dst_ip[2], 
+					(int)packet->header.dst_ip[3], 
+					packet->data);
 		} else if (packet->code == GET_ULIST) {
 			online_users = NULL;
 			if (packet->users == NULL) {
@@ -251,11 +260,13 @@ void speaker_go(server_speaker_t *speaker)
 				set_user_list(packet, online_users);
 				free_queue(online_users);
 			}
+			/*
 			if (packet->to == NULL) {
 				packet->to = speak_strdup(packet->name);
 				packet->to_len = packet->name_len;
 			}
 			free(packet->name);
+			*/
 			packet->name = NULL;
 			packet->name_len = 0;
 			printf("Sending list of online users to %s\n", packet->to);

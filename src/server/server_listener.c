@@ -12,7 +12,7 @@
 #include "users.h"
 #include "../packet/code.h"
 #include "../hashset/fd_hashset.h"
-#include "../hashset/string_hashset.h"
+#include "../hashset/ip_hashset.h"
 
 /*** Macros **************************************************************/
 

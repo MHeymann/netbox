@@ -6,7 +6,7 @@ OBJ_DIR = obj
 ### OBJS ##################################################################
 
 HTAB_OBJS 	= $(OBJ_DIR)/hashset/hashtable.o
-HSET_OBJS 	= $(HTAB_OBJS) $(OBJ_DIR)/hashset/string_hashset.o $(OBJ_DIR)/hashset/fd_hashset.o
+HSET_OBJS 	= $(HTAB_OBJS) $(OBJ_DIR)/hashset/ip_hashset.o $(OBJ_DIR)/hashset/fd_hashset.o
 PACKET_OBJS = $(OBJ_DIR)/packet/packet.o $(OBJ_DIR)/packet/serializer.o
 QUEUE_OBJS 	= $(OBJ_DIR)/queue/queue.o
 USERS_OBJS	= $(OBJ_DIR)/server/users.o

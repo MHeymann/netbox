@@ -137,7 +137,8 @@ GIVE_UNAME:
 		/* Flash some details for easy error spotting by user */
 		printf("About to connect to %s:%d\n", hostname, host_port);
 		printf("Login details\n");
-		printf("\tclient_ip: %s\n", client_ip);
+		printf("\tclient_ip: %d.%d.%d.%d\n", client_ip[0], client_ip[1], 
+				client_ip[2], client_ip[3]);
 		printf("\tpassword: %s\n", password);
 
 		/* Set to client.  Note that these will be free'd in free_client */

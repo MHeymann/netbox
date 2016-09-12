@@ -61,11 +61,11 @@ void ip_hashset_init(ip_hashset_ptr *hs, int init_delta, int delta_diff);
  * @return SUCCESS(1) if the game was inserted successfully and
  * FAIL(0) if not.
  */
-int ip_hashset_insert(ip_hashset_ptr hs, char *skey, int fdvalue);
+int ip_hashset_insert(ip_hashset_ptr hs, unsigned char *ipkey, int fdvalue);
 
-int name_get_fd(ip_hashset_ptr shs, char *name);
+int ip_get_fd(ip_hashset_ptr shs, unsigned char *ip);
 
-void ip_hashset_remove(ip_hashset_ptr hs, char *key);
+void ip_hashset_remove(ip_hashset_ptr hs, unsigned char *key);
 
 /**
  * Get a count of the total number of items in the ip_hashset.

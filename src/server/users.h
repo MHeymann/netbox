@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "../hashset/string_hashset.h"
+#include "../hashset/ip_hashset.h"
 #include "../hashset/fd_hashset.h"
 #include "../queue/queue.h"
 #include "../packet/packet.h"
 
 typedef struct users {
-	string_hashset_ptr names;
+	ip_hashset_ptr ips;
 	fd_hashset_ptr sockets;
 	pthread_mutex_t *hs_protect;
 } users_t;
@@ -28,13 +28,13 @@ users_t *new_users();
 void free_users(users_t *users);
 
 /**
- * Get a queue of the usernames of all online users.
+ * Get a queue of the userips of all online users.
  *
  * @param[in] users: The struct maintaining a list of online users.
  *
- * @return A queue of all the currently online usernames.
+ * @return A queue of all the currently online userips.
  */
-queue_t *get_names(users_t *users);
+queue_t *get_ips(users_t *users);
 
 /**
  * Get the socket file descriptors of all online users.
@@ -54,7 +54,7 @@ void remove_channel(users_t *users, int fd);
 /**
  * Remove a name from users.
  */
-void remove_name(users_t *users, char *name);
+void remove_ip(users_t *users, unsigned char *ip);
 
 /**
  * Add a new socket file descriptor to the users.
@@ -64,6 +64,6 @@ int add_connection(users_t *users, int fd);
 /**
  * process the overhead of a newly logged in user.
  */
-int login_connection(users_t *users, int fd, char *name);
+int login_connection(users_t *users, int fd, unsigned char *ip);
 
 #endif

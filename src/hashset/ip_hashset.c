@@ -91,17 +91,17 @@ void ip_hashset_init(ip_hashset_ptr *hs, int init_delta, int delta_diff)
  * @return SUCCESS(1) if the game was inserted successfully and
  * FAIL(0) if not.
  */
-int ip_hashset_insert(ip_hashset_ptr hs, char *skey, int fdvalue)
+int ip_hashset_insert(ip_hashset_ptr hs, unsigned char *ipkey, int fdvalue)
 {
 	int insert_status;
-	char *scopy = s_strdup(skey);
+	unsigned char *ipcopy = ipdup(ipkey);
 	long fdl;
-	if (!scopy) {
-		fprintf(stderr, "failed to copy string\n");
+	if (!ipcopy) {
+		fprintf(stderr, "failed to copy ip\n");
 	}
 
 	fdl = fdvalue;
-	insert_status = ht_insert(hs->ht, (void *)scopy, (void *)fdl);
+	insert_status = ht_insert(hs->ht, (void *)ipcopy, (void *)fdl);
 	if (insert_status) {
 		switch (insert_status) {
 			case 1:
@@ -120,7 +120,7 @@ int ip_hashset_insert(ip_hashset_ptr hs, char *skey, int fdvalue)
 						insert_status);
 				break;
 		}
-		free(scopy);
+		free(ipcopy);
 		printf("returning fail %d\n", FAIL);
 		return FAIL;
 	} else {
@@ -128,7 +128,7 @@ int ip_hashset_insert(ip_hashset_ptr hs, char *skey, int fdvalue)
 	}
 }
 
-void ip_hashset_remove(ip_hashset_ptr hs, char *key)
+void ip_hashset_remove(ip_hashset_ptr hs, unsigned char *key)
 {
 	ht_remove(hs->ht, (void *)key, free, s_dud_free);
 }
@@ -248,7 +248,7 @@ void ip_val2str(void *key, void *val, char *buffer)
 	struct sockaddr_in address;
 	socklen_t addrlen;
 
-	getsockip(fd, (struct sockaddr *)&address, &addrlen);
+	getsockname(fd, (struct sockaddr *)&address, &addrlen);
 
 	sprintf(buffer, "ip: %d.%d.%d.%d, socket fd: \t%ld, ip: \t%s, port:\t%d",
 			(int)ip[0],
