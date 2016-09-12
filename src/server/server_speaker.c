@@ -18,6 +18,7 @@ typedef struct speaker {
 int cmp_dummy(void *a, void *b);
 char *speak_strdup(char *s);
 void speaker_go(server_speaker_t *speaker);
+unsigned char *speak_ipdup(unsigned char *s);
 
 /*** Functions ***********************************************************/
 
@@ -122,20 +123,20 @@ void add_packet_to_queue(server_speaker_t *speaker, packet_t *packet)
 void push_user_list(server_speaker_t *speaker)
 {
 	packet_t *packet = NULL;
-	queue_t *names = NULL;
+	queue_t *ips = NULL;
 	node_t *n = NULL;
 
-	names = get_names(speaker->users);
+	ips = get_ips(speaker->users);
 
-	for (n = names->head; n; n = n->next) {
+	for (n = ips->head; n; n = n->next) {
 		packet = NULL;
-		packet = new_packet(GET_ULIST, speak_strdup((char *)n->data), NULL, speak_strdup((char *)n->data));
-		set_user_list(packet, names);
+		packet = new_packet(GET_ULIST, speak_ipdup((unsigned char *)n->data), NULL, speak_ipdup((unsigned char *)n->data));
+		set_user_list(packet, ips);
 
 		add_packet_to_queue(speaker, packet);
 	}
 
-	free_queue(names);
+	free_queue(ips);
 }
 
 /**
@@ -147,15 +148,20 @@ void push_user_list(server_speaker_t *speaker)
 void broadcast(server_speaker_t *speaker, packet_t *packet)
 {
 	packet_t *copy;
-	queue_t *names = get_names(speaker->users);
+	queue_t *ips = get_ips(speaker->users);
 	node_t *n = NULL;
 
-	printf("%s is broadcasting %s\n", packet->name, packet->data);
-	for (n = names->head; n; n = n->next) {
+	printf("%d.%d.%d.%d is broadcasting %s\n", 
+			(int)packet->header.src_ip[0], 
+			(int)packet->header.src_ip[1], 
+			(int)packet->header.src_ip[2], 
+			(int)packet->header.src_ip[3], 
+			packet->data);
+	for (n = ips->head; n; n = n->next) {
 		printf("%s to be added for broadcasting\n", (char *)n->data);
 		copy = NULL;
-		copy = new_packet(packet->code, speak_strdup(packet->name), 
-				speak_strdup(packet->data), speak_strdup((char *)n->data));
+		copy = new_packet(packet->code, speak_ipdup(packet->header.src_ip), 
+				speak_strdup(packet->data), speak_ipdup((unsigned char *)n->data));
 		add_packet_to_queue(speaker, copy);
 	}
 }
@@ -256,20 +262,19 @@ void speaker_go(server_speaker_t *speaker)
 		} else if (packet->code == GET_ULIST) {
 			online_users = NULL;
 			if (packet->users == NULL) {
-				online_users = get_names(speaker->users);
+				online_users = get_ips(speaker->users);
 				set_user_list(packet, online_users);
 				free_queue(online_users);
 			}
 			/*
-			if (packet->to == NULL) {
-				packet->to = speak_strdup(packet->name);
-				packet->to_len = packet->name_len;
-			}
-			free(packet->name);
-			*/
 			packet->name = NULL;
 			packet->name_len = 0;
-			printf("Sending list of online users to %s\n", packet->to);
+			*/
+			printf("Sending list of online users to %d.%d.%d.%d\n", 
+					packet->header.src_ip[0], 
+					packet->header.src_ip[1], 
+					packet->header.src_ip[2], 
+					packet->header.src_ip[3]);
 		}
 		users_send_packet(speaker->users, packet);
 		free_packet(packet);
@@ -278,3 +283,15 @@ void speaker_go(server_speaker_t *speaker)
 }
 
 
+
+unsigned char *speak_ipdup(unsigned char *s)
+{
+	int i;
+	int len = 4;
+	unsigned char *c = malloc(len * sizeof(unsigned char));
+
+	for (i = 0; i < len; i++) {
+		c[i] = s[i];
+	}
+	return c;
+}
