@@ -21,7 +21,7 @@ typedef struct client {
 	client_listener_t *listener;
 	int connected_status;
 	pthread_mutex_t *connection_mutex;
-	char *username;
+	unsigned char *client_ip;
 	char *hostname;
 	int hostport;
 } chat_client_t;

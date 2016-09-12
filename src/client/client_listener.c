@@ -31,7 +31,9 @@ typedef struct client_listener {
 
 void listener_go(client_listener_t *listener);
 char *listen_strdup(char *s);
+unsigned char *listen_ipdup(unsigned char *s);
 int listener_is_running(client_listener_t *listener);
+int listen_ipcmp(unsigned char *a, unsigned char *b);
 
 /*** Functions ***********************************************************/
 
@@ -45,7 +47,7 @@ int listener_is_running(client_listener_t *listener);
  *
  *	@return A pointer to the memory location allocated for the listener.
  */
-client_listener_t *new_client_listener(int sd, void *client, char *name)
+client_listener_t *new_client_listener(int sd, void *client, unsigned char *client_ip)
 {
 	client_listener_t *listener = NULL;
 
@@ -55,7 +57,7 @@ client_listener_t *new_client_listener(int sd, void *client, char *name)
 	} else {
 		listener->sd = sd;
 		listener->chat_client = client;
-		listener->name = listen_strdup(name);
+		listener->client_ip = listen_ipdup(client_ip);
 		listener->running = TRUE;
 		listener->listen_mutex = malloc(sizeof(client_listener_t));
 		if (listener->listen_mutex) {
@@ -86,9 +88,9 @@ void free_client_listener(client_listener_t *listener)
 		listener->sd = 0;
 	} 
 	listener->chat_client = NULL;
-	if (listener->name) {
-		free(listener->name);
-		listener->name = NULL;
+	if (listener->client_ip) {
+		free(listener->client_ip);
+		listener->client_ip = NULL;
 	}
 	listener->running = TRUE;
 	if (listener->listen_mutex) {
@@ -183,16 +185,25 @@ void listener_go(client_listener_t *listener)
 			printf("server went offline\n");
 			break;
 		} else if(packet->code == SEND) {
-			sprintf(s, "%s: %s\n", packet->name, packet->data);
+			sprintf(s, "%d.%d.%d.%d: %s\n", 
+					(int)packet->header.src_ip[0], 
+					(int)packet->header.src_ip[1], 
+					(int)packet->header.src_ip[2], 
+					(int)packet->header.src_ip[3],
+					(char *)packet->data);
 			client_append((chat_client_t *)listener->chat_client, s);
 		} else if(packet->code == ECHO) {
 			sprintf(s, "YOU echoed: %s\n", packet->data);
 			client_append((chat_client_t *)listener->chat_client, s);
 		} else if(packet->code == BROADCAST) {
-			if (strcmp(listener->name, packet->name) == 0) {
+			if (listen_ipcmp(listener->client_ip, packet->header.src_ip) == 0) {
 				sprintf(s, "YOU Broadcast: %s\n", packet->data);
 			} else {
-				sprintf(s, "%s Broadcast: %s\n", packet->name, packet->data);
+				sprintf(s, "%d.%d.%d.%d Broadcast: %s\n",
+						(int)packet->header.src_ip[0],
+						(int)packet->header.src_ip[1],
+						(int)packet->header.src_ip[2],
+						(int)packet->header.src_ip[3], packet->data);
 			}
 			client_append((chat_client_t *)listener->chat_client, s);
 		} else if(packet->code == GET_ULIST) {
@@ -219,6 +230,29 @@ char *listen_strdup(char *s)
 	return c;
 }
 
+int listen_ipcmp(unsigned char *a, unsigned char *b)
+{
+	int ret_val;
+	if (a[0] == b[0]) {
+		if (a[1] == b[1]) {
+			if (a[2] == b[2]) {
+				if (a[3] == b[3]) {
+					ret_val = 0;
+				} else {
+					ret_val = (int)a[3] - (int)b[3];
+				}
+			} else {
+				ret_val = (int)a[2] - (int)b[2];
+			}
+		} else {
+			ret_val = (int)a[1] - (int)b[1];
+		}
+	} else {
+		ret_val = (int)a[0] - (int)b[0];
+	}
+	return ret_val;
+}
+
 /* check the value of the running flag, keeping in mind this might be a race
  * condition */
 int listener_is_running(client_listener_t *listener) 
@@ -231,3 +265,17 @@ int listener_is_running(client_listener_t *listener)
 	
 	return ret_val;
 }
+
+unsigned char *listen_ipdup(unsigned char *s) 
+{
+	int i;
+	unsigned char *c = malloc(4);
+
+	for (i = 0; i < 4; i++) {
+		c[i] = s[i];
+	}
+
+	return c;
+}
+
+

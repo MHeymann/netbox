@@ -12,7 +12,8 @@
 /*** Helper Function Prototypes ******************************************/
 
 int cmp_strings(void *a, void *b);
-char *strdup(char *s);
+char *packet_strdup(char *s);
+unsigned char *packet_ipdup(unsigned char *s);
 
 /*** Functions ***********************************************************/
 
@@ -94,8 +95,9 @@ packet_t *new_empty_packet()
  * @return	The memory address of the newly allocated packet, or NULL
  *			if something goes wrong.
  */
-packet_t *new_packet(int code, char *name, char *data, char*to)
+packet_t *new_packet(int code, unsigned char *src_ip, char *data, unsigned char *dst_ip)
 {
+	int i;
 	packet_t *packet = NULL;
 	packet = new_empty_packet();
 	/*
@@ -107,13 +109,19 @@ packet_t *new_packet(int code, char *name, char *data, char*to)
 
 	packet->code = code;
 
-	if (name) {
-		packet->name = name; 
-		packet->name_len = strlen(name);
+	if (src_ip) {
+		for (i = 0; i < 4; i++) {
+			packet->header.src_ip[i] = src_ip[i]; 
+		}
 	} else {
-		packet->name = NULL;
-		packet->name_len = 0;
+		for (i = 0; i < 4; i++) {
+			packet->header.src_ip[i] = '\0';
+		}
 	}
+	/*
+	packet->name = NULL;
+	packet->name_len = 0;
+	*/
 
 	if (data) {
 		packet->data = data;
@@ -123,13 +131,19 @@ packet_t *new_packet(int code, char *name, char *data, char*to)
 		packet->data_len = 0;
 	}
 
-	if (to) {
-		packet->to = to;
-		packet->to_len =  strlen(to);
+	if (dst_ip) {
+		for (i = 0; i < 4; i++) {
+			packet->header.dst_ip[i] = dst_ip[i];
+		}
 	} else {
-		packet->to = NULL;
-		packet->to_len =  0;
+		for (i = 0; i < 4; i++) {
+			packet->header.dst_ip[i] = '\0';
+		}
 	}
+	/*
+	packet->to = NULL;
+	packet->to_len = 0;
+	*/
 
 	packet->users = NULL;
 	packet->list_len = 0;
@@ -195,10 +209,12 @@ void set_user_list(packet_t *p, queue_t *users)
 	p->list_len = get_node_count(users);
 	p->list_size = 0;
 	for (n = users->head; n; n = n->next) {
+		/*
 		p->list_size += sizeof(int);
+		*/
 		if (n->data) {
-			p->list_size += strlen((char *)n->data) * 2;
-			insert_node(cusers, strdup((char *)n->data));
+			p->list_size += 4;
+			insert_node(cusers, packet_ipdup((unsigned char *)n->data));
 		} else {
 			fprintf(stderr, "fault in queue nodes!!\n");
 		}
@@ -336,7 +352,7 @@ packet_t *receive_packet(int fd)
 	r = read(fd, (void *)(b), sizeof(int));
 	
 	if (r == 0) {
-#ifdef PDEBUG
+#ifdef DEBUG
 		printf("0 disconnect*************\n");
 		printf("Does this ever happen??*************\n");
 #endif
@@ -369,7 +385,6 @@ packet_t *receive_packet(int fd)
 	}
 	for (i = 0; i < size; i++) {
 		r = read(fd, (b + i), size - i);
-		printf("Read %d bytes of %d\n", r, size);
 		i += r;
 		if (r == -1) {
 			/*
@@ -399,7 +414,7 @@ int cmp_strings(void *a, void *b)
 	return strcmp((char *)a, (char *)b);
 }
 
-char *strdup(char *s)
+char *packet_strdup(char *s)
 {
 	char *c = malloc(strlen(s) + 1);
 	int i = 0;
@@ -407,5 +422,17 @@ char *strdup(char *s)
 
 	while((c[i++] = s[j++]));
 
+	return c;
+}
+
+
+unsigned char *packet_ipdup(unsigned char *s) 
+{
+	int i;
+	unsigned char *c = malloc(4 * sizeof(unsigned char));
+
+	for (i = 0; i < 4; i++) {
+		c[i] = s[i];
+	}
 	return c;
 }

@@ -14,7 +14,7 @@ typedef struct client {
 	client_listener_t *listener;
 	int connected_status;
 	pthread_mutex_t *connection_mutex;
-	char *username;
+	unsigned char *client_ip;
 	char *hostname;
 	int hostport;
 } chat_client_t;
@@ -23,7 +23,9 @@ typedef struct client {
 /*** Helper Function Prototypes ******************************************/
 
 char *client_strdup(char *s);
+unsigned char *client_ipdup(unsigned char *s);
 void broken_connection(chat_client_t *client);
+int	is_internal(char *s);
 void read_line(FILE *f, char *line);
 void print_usage();
 
@@ -37,18 +39,22 @@ int main (int argc, char *argv[])
 	char line[MAX_LINE]; /* a buffer for when text is being entered */
 	char *localhost = "localhost"; /* a string for easily comparison */
 	/* strings for setting up the client */
-	char *username = NULL;
+	unsigned char client_ip[4];
+	int client_ip_int[4];
 	char *password = NULL;
 	char *hostname = NULL;
 	char *message = NULL;
-	char *to = NULL;
+	unsigned char dst_ip[4];
+	int dst_ip_int[4];
 	/* for strtol error checking */
+	/*
 	char *endptr;
+	*/
 	/* the port of the relevant server */
 	int host_port;
 	int ret;
 
-	if (argc != 3) {
+	if (argc < 2) {
 		print_usage(argv);
 		exit(1);
 	}
@@ -63,10 +69,23 @@ int main (int argc, char *argv[])
 	} else {
 		hostname = client_strdup(argv[1]);
 	}
-	host_port = strtol(argv[2], &endptr, 10);
-	if (endptr == argv[2]) {
-		printf("Invalid port provided, please enter now: ");
-		goto GIVE_PORT;
+
+	if (argc > 2) {
+		if (is_internal(argv[2])) {
+			host_port = 8001;
+		} else {
+			host_port = 8002;
+		}
+	} else {
+		printf("Are you an internal or external client? ([I]/e) ");
+		read_line(stdin, line);
+		if (strlen(line) == 0) {
+			host_port = 8001;
+		} else if (is_internal(line)) {
+			host_port = 8001;
+		} else {
+			host_port = 8002;
+		}
 	}
 	goto GIVE_UNAME;
 
@@ -75,7 +94,7 @@ ESTABLISH_CONNECTION:
 	while (client->connected_status == FALSE) {
 		printf("Please provide a host address for the server: ");
 		if (0 == scanf("%s", line)) {
-			fprintf(stderr, "problem reading username\n");
+			fprintf(stderr, "problem reading hostaddress\n");
 			continue;
 		}
 		if (!strcmp(line, localhost)) {
@@ -84,25 +103,30 @@ ESTABLISH_CONNECTION:
 			hostname = client_strdup(line);
 		}
 
-		printf("Please provide the port on which the server is listening: ");
+		/*
 GIVE_PORT:
-		if (0 == scanf("%s", line)) {
-			printf("problem getting port, please try again: ");
-			goto GIVE_PORT;
+*/
+		printf("Are you an internal or external client? ([I]/e) ");
+		read_line(stdin, line);
+		if (strlen(line) == 0) {
+			host_port = 8001;
+		} else if (is_internal(line)) {
+			host_port = 8001;
+		} else {
+			host_port = 8002;
 		}
-		host_port = strtol(line, &endptr, 10);
-		if (endptr == line) {
-			printf("Invalid port provided, please try again: ");
-			goto GIVE_PORT;
-		}
-	
+			
 GIVE_UNAME:
-		printf("Please provide a username: ");
-		if (0 == scanf("%s", line)) {
-			fprintf(stderr, "problem reading username\n");
+		printf("Please provide a client_ip: ");
+		if (4 != scanf("%d.%d.%d.%d", client_ip_int, client_ip_int + 1,
+					client_ip_int + 2, client_ip_int + 3)) {
+			fprintf(stderr, "problem reading client_ip\n");
 			goto GIVE_UNAME;
 		}
-		username = client_strdup(line);
+		client_ip[0] = (unsigned char)client_ip_int[0];
+		client_ip[1] = (unsigned char)client_ip_int[1];
+		client_ip[2] = (unsigned char)client_ip_int[2];
+		client_ip[3] = (unsigned char)client_ip_int[3];
 	
 		printf("Please provide a password: ");
 		if (0 == scanf("%s", line)) {
@@ -113,17 +137,17 @@ GIVE_UNAME:
 		/* Flash some details for easy error spotting by user */
 		printf("About to connect to %s:%d\n", hostname, host_port);
 		printf("Login details\n");
-		printf("\tusername: %s\n", username);
+		printf("\tclient_ip: %s\n", client_ip);
 		printf("\tpassword: %s\n", password);
 
 		/* Set to client.  Note that these will be free'd in free_client */
-		client->username = username;
+		client->client_ip = client_ipdup(client_ip);
 		client->hostname = hostname;
 		client->hostport = host_port;
 
 	
 		/* Create a speaker */
-		if ((client->speaker = new_client_speaker(username, hostname, host_port)) == NULL) {
+		if ((client->speaker = new_client_speaker(client_ip, hostname, host_port)) == NULL) {
 			fprintf(stderr, "Failed to create speaker\n");
 			free_chat_client(client);
 			free(password);
@@ -132,7 +156,7 @@ GIVE_UNAME:
 		}
 		/* 
 		 * Send login details over the new speaker. This entails
-		 * creating a connection and also sending username and password 
+		 * creating a connection and also sending client_ip and password 
 		 */
 		if (!speaker_login(client->speaker, password)) {
 			fprintf(stderr, "Failed to login\n");
@@ -148,7 +172,7 @@ GIVE_UNAME:
 		}
 	} /* while connecting */
 
-	if ((client->listener = new_client_listener(client->speaker->sd, client, username)) == NULL) {
+	if ((client->listener = new_client_listener(client->speaker->sd, client, client_ip)) == NULL) {
 		fprintf(stderr, "Failed to create listener\n");
 		free_chat_client(client);
 		exit(4);
@@ -177,21 +201,31 @@ GIVE_UNAME:
 			printf("some problem scanning for input\n");
 		} else if (strcmp(line, "help") == 0) {
 			printf("The following commands are supported:\n");
-			printf("\t\x1b[1;34msend\x1b[0m: \t\tSend a message\n");
-			printf("\t\x1b[1;34mbroadcast\x1b[0m: \tBroadcast a message to all users\n");
-			printf("\t\x1b[1;34mecho\x1b[0m: \t\tEcho a message to yourself\n");
-			printf("\t\x1b[1;34mexit\x1b[0m: \t\tShut down this chat client\n");
-			printf("\t\x1b[1;34mquit\x1b[0m: \t\tSee exit\n");
+			printf("\t\x1b[1;34msend\x1b[0m: \t\tSend a message.\n");
+			printf("\t\x1b[1;34mbroadcast\x1b[0m: \tBroadcast a message to all users.\n");
+			printf("\t\x1b[1;34mecho\x1b[0m: \t\tEcho a message to yourself.\n");
+			printf("\t\x1b[1;34mlistusers\x1b[0m: \t\tList the users currently online.\n");
+			printf("\t\x1b[1;34mexit\x1b[0m: \t\tShut down this chat client.\n");
+			printf("\t\x1b[1;34mquit\x1b[0m: \t\tSee exit.\n");
 		} else if (strcmp(line, "send") == 0) {
-			printf("Type the user name of your recipient: \n");
+			printf("Type the user ip of your recipient: \n");
 			printf(">> ");
 			read_line(stdin, line);
+
+			sscanf(line, "%d.%d.%d.%d", dst_ip_int, dst_ip_int + 1,
+					dst_ip_int + 2, dst_ip_int + 3);
 			
+			dst_ip[0] = dst_ip_int[0];
+			dst_ip[1] = dst_ip_int[1];
+			dst_ip[2] = dst_ip_int[2];
+			dst_ip[3] = dst_ip_int[3];
+			/*
 			to = client_strdup(line);
 			if (!to) {
 				printf("some error copying recipient name\n");
 				continue;
 			}
+			*/
 			printf("Type the message to be sent: \n");
 			printf(">> ");
 			read_line(stdin, line);
@@ -199,17 +233,28 @@ GIVE_UNAME:
 			message = client_strdup(line);
 			if (!message) {
 				printf("some error copying message\n");
+				/*
 				free(to);
 				to = NULL;
+				*/
 				continue;
 			}
-			if (send_string(client->speaker, message, to)) {
-				printf("%s to %s : %s\n", client->username, to, message);
+			if (send_string(client->speaker, message, dst_ip)) {
+				printf("%d.%d.%d.%d to %d.%d.%d.%d : %s\n", 
+						(int)client->client_ip[0], 
+						(int)client->client_ip[1], 
+						(int)client->client_ip[2], 
+						(int)client->client_ip[3], 
+						(int)dst_ip[0], (int)dst_ip[1], 
+						(int)dst_ip[2], (int)dst_ip[3],
+						message);
 			} else {
 				printf("Some error sending message\n");
 			}
+			/*
 			free(to);
 			to = NULL;
+			*/
 			free(message);
 			message = NULL;
 		} else if (strcmp(line, "broadcast") == 0) {
@@ -262,14 +307,17 @@ GIVE_UNAME:
 			goto ESTABLISH_CONNECTION;
 		} else if ((strcmp(line, "exit") == 0) || 
 			(strcmp(line, "quit") == 0)) {
-			break;
+			printf("exiting client\n");
+			goto STOP_THREADS;
 		} else {
 			printf("Please type 'help<enter>' for available options\n");
 		}
 	}
 
 	/* cleanup */
+	printf("speaker sending logoff\n");
 	speaker_logoff(client->speaker);
+STOP_THREADS:
 	printf("Stopping listener\n");
 	stop_listener(client->listener);
 	printf("Joining listen thread\n");
@@ -304,7 +352,7 @@ chat_client_t *new_client()
 	client->speaker = NULL;
 	client->listener = NULL;
 	client->connection_mutex = NULL;
-	client->username = NULL;
+	client->client_ip = NULL;
 	client->hostname = NULL;
 	client->hostport = DEFAULT_PORT;
 
@@ -355,9 +403,9 @@ void free_chat_client(chat_client_t *client)
 		free(client->connection_mutex);
 		client->connection_mutex = NULL;
 	}
-	if (client->username) {
-		free(client->username);
-		client->username = NULL;
+	if (client->client_ip) {
+		free(client->client_ip);
+		client->client_ip = NULL;
 	}
 	if (client->hostname) {
 		free(client->hostname);
@@ -382,7 +430,7 @@ void client_append(chat_client_t *client, char *s)
 	if (!client) {
 		return;
 	}
-	printf("%s:: %s", client->username, s);
+	printf("%s:: %s", client->client_ip, s);
 }
 
 /** 
@@ -395,10 +443,17 @@ void client_append(chat_client_t *client, char *s)
  */
 void client_show_online_users(chat_client_t *client, queue_t *users_q)
 {
+	unsigned char *user_ip;
 	node_t *node = NULL;
-	printf("Online Users being shown to %s:\n", client->username);
+	printf("Online Users being shown to %d.%d.%d.%d:\n", 
+			client->client_ip[0], 
+			client->client_ip[1], 
+			client->client_ip[2], 
+			client->client_ip[3]);
 	for (node = users_q->head; node; node = node->next) {
-		printf("\t- %s\n", (char *)node->data);
+		user_ip = (unsigned char *)node->data;
+		printf("\t- %d.%d.%d.%d\n", (int)user_ip[0], (int)user_ip[1], 
+				(int)user_ip[2], (int)user_ip[3]);
 	}
 	printf("shown\n>> ");
 }
@@ -418,6 +473,18 @@ char *client_strdup(char *s)
 	int j = 0;
 
 	while ((c[i++] = s[j++]));
+
+	return c;
+}
+
+unsigned char *client_ipdup(unsigned char *s) 
+{
+	int i;
+	unsigned char *c = malloc(4);
+
+	for (i = 0; i < 4; i++) {
+		c[i] = s[i];
+	}
 
 	return c;
 }
@@ -447,12 +514,27 @@ void read_line(FILE *f, char *line)
 	line[i] = '\0';
 }
 
+int is_internal(char *s)
+{
+	int retval = FALSE;
+	if(s[0] == 'i') {
+		retval = TRUE;
+	} else if (s[0] == 'I') {
+		retval = TRUE;
+	} else if (s[0] == 'e') {
+		retval = FALSE;
+	} else if (s[0] == 'E') {
+		retval = FALSE;
+	}
+	return retval;
+}
+
 /**
  * Print how this program should be run.
  */
 void print_usage(char **argv)
 {
-	printf("\x1b[1;31mUSAGE\x1b[0m: %s hostaddress hostport\n", argv[0]);
+	printf("\x1b[1;31mUSAGE\x1b[0m: %s hostaddress [i/e]\n", argv[0]);
 	printf("\thostaddress can be \"localhost\" ");
 	printf("and will convert to 127.0.0.1\n");
 }

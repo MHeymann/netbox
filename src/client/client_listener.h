@@ -11,7 +11,7 @@
 typedef struct client_listener {
 	int sd;							/* A socket discriptor */
 	void *chat_client;				/* A pointer to the client structure */
-	char *name;						/* The username of the client */
+	unsigned char *client_ip;		/* The username of the client */
 	int running;					/* Integer that functions as boolean */
 	pthread_mutex_t *listen_mutex;	/* A mutex for protecting the running boolean */
 } client_listener_t;
@@ -28,7 +28,7 @@ typedef struct client_listener {
  *
  *	@return A pointer to the memory location allocated for the listener.
  */
-client_listener_t *new_client_listener(int sd, void *client, char *name);
+client_listener_t *new_client_listener(int sd, void *client, unsigned char *client_ip);
 
 /**
  * Free all the fields in the struct client_listener as needed.

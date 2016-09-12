@@ -67,7 +67,7 @@ packet_t *new_empty_packet();
  * @return	The memory address of the newly allocated packet, or NULL
  *			if something goes wrong.
  */
-packet_t *new_packet(int code, char *name, char *data, char*to);
+packet_t *new_packet(int code, unsigned char *src_ip, char *data, unsigned char*dst_ip);
 
 /** 
  * Free the a given packet.

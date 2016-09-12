@@ -21,7 +21,7 @@
 
 /*
 typedef struct client_speaker {
-	char *name;
+	unsigned char *client_ip;
 	char *hostname;
 	int port;
 	int sd;
@@ -31,6 +31,7 @@ typedef struct client_speaker {
 /*** Helper Function Prototypes ******************************************/
 
 char *speaker_strdup(char *s);
+unsigned char *speaker_ipdup(unsigned char *s);
 int speaker_send_packet(client_speaker_t *speaker, packet_t *packet);
 int connect_speaker(client_speaker_t *speaker);
 
@@ -48,13 +49,13 @@ int connect_speaker(client_speaker_t *speaker);
  *
  * @return A pointer to a new instance of struct client_speaker.
  */
-client_speaker_t *new_client_speaker(char *name, char *hostname, int port)
+client_speaker_t *new_client_speaker(unsigned char *client_ip, char *hostname, int port)
 {
 	client_speaker_t *speaker = NULL;
 
 	speaker = malloc(sizeof(client_speaker_t));
 	if (speaker) {
-		speaker->name = speaker_strdup(name);
+		speaker->client_ip = speaker_ipdup(client_ip);
 		speaker->hostname = speaker_strdup(hostname);
 		speaker->port = port;
 		speaker->sd = 0;
@@ -75,9 +76,9 @@ void free_client_speaker(client_speaker_t *speaker)
 	if (!speaker) {
 		return;
 	}
-	if (speaker->name) {
-		free(speaker->name);
-		speaker->name = NULL;
+	if (speaker->client_ip) {
+		free(speaker->client_ip);
+		speaker->client_ip = NULL;
 	}
 	if (speaker->hostname) {
 		free(speaker->hostname);
@@ -130,7 +131,7 @@ void free_speaker(client_speaker_t *speaker)
  */
 void get_online_names(client_speaker_t *speaker)
 {
-	packet_t *packet = new_packet(GET_ULIST, speaker_strdup(speaker->name), NULL, NULL);
+	packet_t *packet = new_packet(GET_ULIST, speaker_ipdup(speaker->client_ip), NULL, NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send packet to request user list\n");
@@ -148,10 +149,10 @@ void get_online_names(client_speaker_t *speaker)
  * @param[in] s:		The string to be sent as a message.
  * @param[in] to:		The username of the recipient.
  */
-int send_string(client_speaker_t *speaker, char *s, char *to)
+int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip)
 {
-	packet_t *packet = new_packet(SEND, speaker_strdup(speaker->name), 
-			speaker_strdup(s), speaker_strdup(to));
+	packet_t *packet = new_packet(SEND, speaker_ipdup(speaker->client_ip), 
+			speaker_strdup(s), speaker_ipdup(dst_ip));
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send message packet\n");
@@ -176,7 +177,7 @@ int send_string(client_speaker_t *speaker, char *s, char *to)
  */
 int echo_string(client_speaker_t *speaker, char *s)
 {
-	packet_t *packet = new_packet(ECHO, speaker_strdup(speaker->name), 
+	packet_t *packet = new_packet(ECHO, speaker_ipdup(speaker->client_ip), 
 			speaker_strdup(s), NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
@@ -203,7 +204,7 @@ int echo_string(client_speaker_t *speaker, char *s)
  */
 int broadcast_string(client_speaker_t *speaker, char *s)
 {
-	packet_t *packet = new_packet(BROADCAST, speaker_strdup(speaker->name), 
+	packet_t *packet = new_packet(BROADCAST, speaker_ipdup(speaker->client_ip), 
 			speaker_strdup(s), NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
@@ -253,7 +254,7 @@ int speaker_login(client_speaker_t *speaker, char *pw)
 	}
 	printf("Connected\n");
 
-	packet = new_packet(LOGIN, speaker_strdup(speaker->name), 
+	packet = new_packet(LOGIN, speaker_ipdup(speaker->client_ip), 
 			speaker_strdup(pw), NULL);
 
 	printf("Sending log in packet\n");
@@ -313,7 +314,7 @@ int speaker_login(client_speaker_t *speaker, char *pw)
  */
 int speaker_logoff(client_speaker_t *speaker)
 {
-	packet_t *packet = new_packet(QUIT, speaker_strdup(speaker->name), 
+	packet_t *packet = new_packet(QUIT, speaker_ipdup(speaker->client_ip), 
 			NULL, NULL);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
@@ -383,4 +384,16 @@ int connect_speaker(client_speaker_t *speaker)
 		speaker->sd = sockfd;
 		return TRUE;
 	}
+}
+
+unsigned char *speaker_ipdup(unsigned char *s) 
+{
+	int i;
+	unsigned char *c = malloc(4 * sizeof(unsigned char));
+
+	for (i = 0; i < 4; i++) {
+		c[i] = s[i];
+	}
+
+	return c;
 }

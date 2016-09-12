@@ -11,12 +11,12 @@ PACKET_OBJS = $(OBJ_DIR)/packet/packet.o $(OBJ_DIR)/packet/serializer.o
 QUEUE_OBJS 	= $(OBJ_DIR)/queue/queue.o
 USERS_OBJS	= $(OBJ_DIR)/server/users.o
 ADDRESS_OBJS	   = $(OBJ_DIR)/address/address_alloc.o 
-MAC_OBJS 	= $(OBJ_DIR)/address/macs.o $(OBJ_DIR)/hashset/mac_hashset.o
+MAC_OBJS 	= $(HTAB_OBJS) $(OBJ_DIR)/address/macs.o $(OBJ_DIR)/hashset/mac_hashset.o
 SERVER_SOCKET_OBJS = $(OBJ_DIR)/server/server_speaker.o $(OBJ_DIR)/server/server_listener.o
 CLIENT_SOCKET_OBJS = $(OBJ_DIR)/client/client_speaker.o $(OBJ_DIR)/client/client_listener.o
 
 SERVER_OBJS = $(HSET_OBJS) $(PACKET_OBJS) $(QUEUE_OBJS) $(USERS_OBJS) $(SERVER_SOCKET_OBJS) $(ADDRESS_OBJS) $(MAC_OBJS)
-CLIENT_OBJS = $(HSET_OBJS) $(PACKET_OBJS) $(QUEUE_OBJS) $(CLIENT_SOCKET_OBJS) $(ADDRESS_OBJS) $(MAC_OBJS)
+CLIENT_OBJS = $(PACKET_OBJS) $(QUEUE_OBJS) $(CLIENT_SOCKET_OBJS) $(ADDRESS_OBJS) $(MAC_OBJS)
 
 
 OBJS = $(SERVER_OBJS) $(CLIENT_OBJS)

@@ -8,7 +8,7 @@
 /*** Struct Definitions **************************************************/
 
 typedef struct client_speaker {
-	char *name;		/* The username of the client */
+	unsigned char *client_ip;		/* The username of the client */
 	char *hostname; /* The ip address of the server */
 	int port;		/* The port of the server */
 	int sd;			/* The file descriptor of the socket */
@@ -28,7 +28,7 @@ typedef struct client_speaker {
  *
  * @return A pointer to a new instance of struct client_speaker.
  */
-client_speaker_t *new_client_speaker(char *name, char *hostname, int port);
+client_speaker_t *new_client_speaker(unsigned char *client_ip, char *hostname, int port);
 
 /**
  * Free a struct client_speaker.
@@ -52,7 +52,7 @@ void get_online_names(client_speaker_t *speaker);
  * @param[in] s:		The string to be sent as a message.
  * @param[in] to:		The username of the recipient.
  */
-int send_string(client_speaker_t *speaker, char *s, char *to);
+int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip);
 
 /**
  * Send a string to the server to be echoed back. 

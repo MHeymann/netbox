@@ -30,7 +30,7 @@ unsigned long hash_fd(void *key, unsigned int size);
 int cmp_fd_strings(void *a, void *b);
 void fd_val2str(void *key, void *val, char *buffer);
 void fd_dud_free(void *);
-char *fd_strdup(char *s);
+unsigned char *fd_ipdup(unsigned char *s);
 void *copy_fd_key(void *a);
 int cmp_fds(void *a, void *b);
 
@@ -82,16 +82,16 @@ void fd_hashset_init(fd_hashset_ptr *hs, int init_delta, int delta_diff)
 	*hs = hset;
 }
 
-void fd_hashset_update(fd_hashset_ptr hs, int fdkey, char *svalue)
+void fd_hashset_update(fd_hashset_ptr hs, int fdkey, unsigned char *ipvalue)
 {
 	long fdl;
-	char *scopy = fd_strdup(svalue);
-	if (!scopy) {
-		fprintf(stderr, "failed to copy string\n");
+	unsigned char *ipcopy = fd_ipdup(ipvalue);
+	if (!ipcopy) {
+		fprintf(stderr, "failed to copy ip\n");
 	}
 
 	fdl = fdkey;
-	ht_update(hs->ht, (void *)fdl, (void *)scopy, free);
+	ht_update(hs->ht, (void *)fdl, (void *)ipcopy, free);
 }
 
 /**
@@ -104,19 +104,18 @@ void fd_hashset_update(fd_hashset_ptr hs, int fdkey, char *svalue)
  * @return SUCCESS(1) if the game was inserted successfully and
  * FAIL(0) if not.
  */
-int fd_hashset_insert(fd_hashset_ptr hs, int fdkey, char *svalue)
+int fd_hashset_insert(fd_hashset_ptr hs, int fdkey, unsigned char *ipvalue)
 {
 	int insert_status;
-	char *scopy = fd_strdup(svalue);
 	long fdl;
-	if (!scopy) {
+	unsigned char *ipcopy = fd_ipdup(ipvalue);
+
+	if (!ipcopy) {
 		fprintf(stderr, "failed to copy string\n");
 	}
 
 	fdl = fdkey;
-	printf("about to insert fd into table\n");
-	insert_status = ht_insert(hs->ht, (void *)fdl, (void *)scopy);
-	printf("inserted fd into table\n");
+	insert_status = ht_insert(hs->ht, (void *)fdl, (void *)ipcopy);
 	if (insert_status) {
 		switch (insert_status) {
 			case 1:
@@ -135,7 +134,7 @@ int fd_hashset_insert(fd_hashset_ptr hs, int fdkey, char *svalue)
 						insert_status);
 				break;
 		}
-		free(scopy);
+		free(ipcopy);
 		return FAIL;
 	} else {
 		return SUCCESS;
@@ -148,12 +147,12 @@ void fd_hashset_remove(fd_hashset_ptr hs, int key)
 	ht_remove(hs->ht, (void *)lkey, fd_dud_free, free);
 }
 
-char *fd_get_name(fd_hashset_t *fdhs, int fd) 
+unsigned char *fd_get_ip(fd_hashset_t *fdhs, int fd) 
 {
-	void *name = NULL;
+	void *ip = NULL;
 	long fdl = fd;
-	if (ht_lookup(fdhs->ht, (void *)fdl, &name)) {
-		return fd_strdup((char *)name);
+	if (ht_lookup(fdhs->ht, (void *)fdl, &ip)) {
+		return fd_ipdup((unsigned char *)ip);
 	} else {
 		return NULL;
 	}
@@ -231,14 +230,16 @@ int cmp_fds(void *a, void *b)
  */
 void fd_val2str(void *key, void *val, char *buffer)
 {
-	char *name = (char *)val;
+	unsigned char *name = (unsigned char *)val;
 	long fd = (long) key;
 	struct sockaddr_in address;
 	socklen_t addrlen;
 
 	getsockname((int)fd, (struct sockaddr *)&address, &addrlen);
 
-	sprintf(buffer, "name: %s, socket fd: \t%ld, ip: \t%s, port:\t%d", name, fd, 
+	sprintf(buffer, "ip: %d.%d.%d.%d, socket fd: \t%ld, ip: \t%s, port:\t%d", 
+			(int)name[0], (int)name[1], 
+			(int)name[2], (int)name[3], fd, 
 			inet_ntoa(address.sin_addr), 
 			ntohs(address.sin_port));	
 }
@@ -289,18 +290,35 @@ unsigned long hash_fd(void *key, unsigned int size)
  */
 int cmp_fd_strings(void *a, void *b) 
 {
-	return strcmp((char *)a, (char *)b);
+	int i;
+	unsigned char *A = (unsigned char *)a;
+	unsigned char *B = (unsigned char *)b;
+	unsigned long A_val = 0, B_val = 0;
+
+	for (i = 0; i < 4; i++) {
+		A_val += (A_val << 8) + (unsigned long)A[i];
+	}
+	for (i = 0; i < 4; i++) {
+		B_val += (B_val << 8) + (unsigned long)B[i];
+	}
+	if (A_val > B_val) {
+		return 1;
+	} else if (A_val < B_val) {
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
 
-char *fd_strdup(char *s) {
+unsigned char *fd_ipdup(unsigned char *s) 
+{
 	int i;
-	int len = strlen(s);
-	char *scopy = malloc(len + 1);
+	int len = 4;
+	unsigned char *scopy = malloc(len);
 	for (i = 0; i < len; i++) {
 		scopy[i] = s[i];
 	}
-	scopy[len] = '\0';
 	return scopy;
 }
 

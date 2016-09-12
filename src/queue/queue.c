@@ -477,7 +477,6 @@ void append(queue_t *q, node_t *node)
 void find_and_insert(queue_t *q, node_t *node)
 {
 	node_t *current = NULL;
-	printf("ouch\n");
 	if (!q) {
 		fprintf(stderr, "Please provide a valid queue pointer to insert into.\n");
 	}

@@ -16,59 +16,59 @@
 #include <arpa/inet.h>
 
 #include "hashtable.h"
-#include "string_hashset.h"
+#include "ip_hashset.h"
 
 /*** Lookuptable struct Description **************************************/
 
-typedef struct string_hashset {
+typedef struct ip_hashset {
 	hashtable_p ht;
-} string_hashset_t;
+} ip_hashset_t;
 
 /*** Helper Function Prototypes ******************************************/
 
-unsigned long hash_string(void *key, unsigned int size);
-int cmp_s_strings(void *a, void *b);
+unsigned long hash_ip(void *key, unsigned int size);
+int cmp_ips(void *a, void *b);
 void s_val2str(void *key, void *val, char *buffer);
 void s_dud_free(void *);
-char *s_strdup(char *s);
-void *copy_s_key(void *key);
+unsigned char *ipdup(unsigned char *s);
+void *copy_ip_key(void *key);
 
 /*** Functions ***********************************************************/
 
 /**
- * Allocate the datastructures of a string_hashset and initialise the parameters.
+ * Allocate the datastructures of a ip_hashset and initialise the parameters.
  *
- * @param[in][out] ht a pointer to a pointer of the newly created string_hashset.
+ * @param[in][out] ht a pointer to a pointer of the newly created ip_hashset.
  */
-void string_hashset_init_defaults(string_hashset_ptr *hs)
+void ip_hashset_init_defaults(ip_hashset_ptr *hs)
 {
-	string_hashset_init(hs, -1, -1);
+	ip_hashset_init(hs, -1, -1);
 }	
 
 /**
- * Allocate the datastructures of a string_hashset and initialise the parameters.
+ * Allocate the datastructures of a ip_hashset and initialise the parameters.
  *
  * @param[in][out] ht		a pointer to a pointer of the newly created 
- *							string_hashset.
+ *							ip_hashset.
  * @param[in] init_delta	The power to raise two by to get the initial
  *							size of the underlying hashtable.
  * @param[in] delta_diff	The integer number to increment the delta
  *							value by when resizing the underlying 
  *							hashtable.
  */
-void string_hashset_init(string_hashset_ptr *hs, int init_delta, int delta_diff)
+void ip_hashset_init(ip_hashset_ptr *hs, int init_delta, int delta_diff)
 {
 	hashtable_p ht = NULL;
-	string_hashset_ptr hset = NULL;
+	ip_hashset_ptr hset = NULL;
 
-	hset = malloc(sizeof(string_hashset_t));
+	hset = malloc(sizeof(ip_hashset_t));
 	if (!hset) {
 		fprintf(stderr, "Error allocating memory for lookuptable.\n");
 		*hs = NULL;
 		return;
 	}
 
-	ht = ht_init(0.75f, init_delta, delta_diff, hash_string, cmp_s_strings);
+	ht = ht_init(0.75f, init_delta, delta_diff, hash_ip, cmp_ips);
 	if (!ht) {
 		fprintf(stderr, "Error initializing hashtable.\n");
 		free(hset);
@@ -82,16 +82,16 @@ void string_hashset_init(string_hashset_ptr *hs, int init_delta, int delta_diff)
 }
 
 /**
- * Insert a string instance into the string_hashset.
+ * Insert a string instance into the ip_hashset.
  *
- * @param[in] hs A pointer to the string_hashset into which to insert.
+ * @param[in] hs A pointer to the ip_hashset into which to insert.
  *
  * @param[in] skey A pointer to the string to insert.
  *
  * @return SUCCESS(1) if the game was inserted successfully and
  * FAIL(0) if not.
  */
-int string_hashset_insert(string_hashset_ptr hs, char *skey, int fdvalue)
+int ip_hashset_insert(ip_hashset_ptr hs, char *skey, int fdvalue)
 {
 	int insert_status;
 	char *scopy = s_strdup(skey);
@@ -116,7 +116,7 @@ int string_hashset_insert(string_hashset_ptr hs, char *skey, int fdvalue)
 				break;
 			default:
 				fprintf(stderr, 
-						"This is weird in string_hashset_insert table's switch statement: %d\n", 
+						"This is weird in ip_hashset_insert table's switch statement: %d\n", 
 						insert_status);
 				break;
 		}
@@ -128,16 +128,16 @@ int string_hashset_insert(string_hashset_ptr hs, char *skey, int fdvalue)
 	}
 }
 
-void string_hashset_remove(string_hashset_ptr hs, char *key)
+void ip_hashset_remove(ip_hashset_ptr hs, char *key)
 {
 	ht_remove(hs->ht, (void *)key, free, s_dud_free);
 }
 
-int name_get_fd(string_hashset_t *shs, char *name)
+int ip_get_fd(ip_hashset_t *shs, unsigned char *ip)
 {
 	void *value = NULL;
 	long fdl;
-	if (ht_lookup(shs->ht, (void *)name, &value)) {
+	if (ht_lookup(shs->ht, (void *)ip, &value)) {
 		fdl = (long)value;
 
 		return (int)fdl;
@@ -147,9 +147,9 @@ int name_get_fd(string_hashset_t *shs, char *name)
 }
 
 /**
- * Force insertion of a string and fd instance into the string_hashset.
+ * Force insertion of a string and fd instance into the ip_hashset.
  *
- * @param[in] hs A pointer to the string_hashset into which to insert.
+ * @param[in] hs A pointer to the ip_hashset into which to insert.
  *
  * @param[in] string A pointer to the game instance to insert.
  *
@@ -157,7 +157,7 @@ int name_get_fd(string_hashset_t *shs, char *name)
  * FAIL(0) if not.
  */
 /*
-int string_hashset_force_insert(string_hashset_ptr hs, game_t *game)
+int ip_hashset_force_insert(ip_hashset_ptr hs, game_t *game)
 {
 	int insert_status;
 	state_t *state = (state_t *) game;
@@ -171,7 +171,7 @@ int string_hashset_force_insert(string_hashset_ptr hs, game_t *game)
 				break;
 			default:
 				fprintf(stderr, 
-						"This is weird in string_hashset_insert table's switch statement: %d\n", 
+						"This is weird in ip_hashset_insert table's switch statement: %d\n", 
 						insert_status);
 				break;
 		}
@@ -183,13 +183,13 @@ int string_hashset_force_insert(string_hashset_ptr hs, game_t *game)
 */
 
 /**
- * Get a count of the total number of items in the string_hashset.
+ * Get a count of the total number of items in the ip_hashset.
  *
- * @param[in] hs A pointer to the string_hashset for which to get a count.
+ * @param[in] hs A pointer to the ip_hashset for which to get a count.
  *
- * @return An integer of the total number of items in the string_hashset.
+ * @return An integer of the total number of items in the ip_hashset.
  */
-int string_hashset_content_count(string_hashset_ptr hs)
+int ip_hashset_content_count(ip_hashset_ptr hs)
 {
 	return ht_item_count(hs->ht);
 }
@@ -197,38 +197,38 @@ int string_hashset_content_count(string_hashset_ptr hs)
 
 
 /**
- *	Print the underlying hashtable of the string_hashset. 
+ *	Print the underlying hashtable of the ip_hashset. 
  *
- *	@param[in] hs A pointer to the string_hashset to print.  
+ *	@param[in] hs A pointer to the ip_hashset to print.  
  */
-void print_string_hashset(string_hashset_ptr hs)
+void print_ip_hashset(ip_hashset_ptr hs)
 {
 	print_ht(hs->ht, s_val2str);	
 }
 
 /**
- * Free the values in the string_hashset and the string_hashset itself. 
+ * Free the values in the ip_hashset and the ip_hashset itself. 
  *
- * @param[in] hs The string_hashset to be free'd.  
+ * @param[in] hs The ip_hashset to be free'd.  
  */
-void free_string_hashset(string_hashset_ptr hs)
+void free_ip_hashset(ip_hashset_ptr hs)
 {
 	ht_free(hs->ht, free, s_dud_free);
 	hs->ht = NULL;
 	free(hs);
 }
 
-queue_t *shs_get_keys(string_hashset_t *s_hs)
+queue_t *shs_get_keys(ip_hashset_t *s_hs)
 {
-	return get_keys(s_hs->ht, copy_s_key, cmp_s_strings, free);
+	return get_keys(s_hs->ht, copy_ip_key, cmp_ips, free);
 }
 
 
 /*** Helper Functions ****************************************************/
 
-void *copy_s_key(void *key)
+void *copy_ip_key(void *key)
 {
-	return (void *)s_strdup((char *)key);
+	return (void *)ipdup((unsigned char *)key);
 }
 
 /**
@@ -241,16 +241,20 @@ void *copy_s_key(void *key)
  * @param[out] buffer The char pointer where the string representation 
  * of the pair will be put.  
  */
-void s_val2str(void *key, void *val, char *buffer)
+void ip_val2str(void *key, void *val, char *buffer)
 {
-	char *name = (char *)key;
+	unsigned char *ip = (unsigned char *)key;
 	long fd = (long) val;
 	struct sockaddr_in address;
 	socklen_t addrlen;
 
-	getsockname(fd, (struct sockaddr *)&address, &addrlen);
+	getsockip(fd, (struct sockaddr *)&address, &addrlen);
 
-	sprintf(buffer, "name: %s, socket fd: \t%ld, ip: \t%s, port:\t%d", name, fd, 
+	sprintf(buffer, "ip: %d.%d.%d.%d, socket fd: \t%ld, ip: \t%s, port:\t%d",
+			(int)ip[0],
+			(int)ip[1],
+			(int)ip[2],
+			(int)ip[3], fd, 
 			inet_ntoa(address.sin_addr), 
 			ntohs(address.sin_port));	
 }
@@ -282,15 +286,14 @@ void s_dud_free(void *key)
  *
  * @return The hash value as an unsigned long. 
  */
-unsigned long hash_string(void *key, unsigned int size)
+unsigned long hash_ip(void *key, unsigned int size)
 {
-	char *string = (char *)key;
+	unsigned char *string = (unsigned char *)key;
 	int i;
 	unsigned long hash = 0;
-	int len = strlen(string);
 
-	for (i = 0; i < len; i++) {
-		hash = (hash << 1) + string[i];
+	for (i = 0; i < 4; i++) {
+		hash = (hash << 4) + (long)string[i];
 	}
 	
 	return (hash % size);
@@ -306,19 +309,36 @@ unsigned long hash_string(void *key, unsigned int size)
  *  @return An integer value, 0 if the two strings are identical
  *  less than 0 if a comes before b and more than 0 otherwise. 
  */
-int cmp_s_strings(void *a, void *b) 
+int cmp_ips(void *a, void *b) 
 {
-	return strcmp((char *)a, (char *)b);
+	unsigned char *A = (unsigned char *)a;
+	unsigned char *B = (unsigned char *)b;
+	unsigned long A_val;
+	unsigned long B_val;
+	int i;
+
+	for (i = 0; i < 4; i++) {
+		A_val = (A_val << 8) + (unsigned long)A[i];
+	}
+	for (i = 0; i < 4; i++) {
+		B_val = (B_val << 8) + (unsigned long)B[i];
+	}
+	if (A > B) {
+		return 1;
+	} else if (A < B) {
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
 
-char *s_strdup(char *s) {
+unsigned char *ipdup(unsigned char *s) {
 	int i;
-	int len = strlen(s);
-	char *scopy = malloc(len + 1);
+	int len = 4;
+	unsigned char *scopy = malloc(len);
 	for (i = 0; i < len; i++) {
 		scopy[i] = s[i];
 	}
-	scopy[len] = '\0';
 	return scopy;
 }

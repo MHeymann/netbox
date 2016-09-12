@@ -298,7 +298,6 @@ void listener_go(server_listener_t *listener)
 
 		/* IO on other sockets */
 		for (n = online_list2->head; n; n = n->next) {
-			printf("iterating online list %ld\n", (long)n->data);
 			sd = (int)((long)n->data);
 			if (sd <= 0) {
 				printf("this shouldn't be possible when translating a name to an sd.\n");

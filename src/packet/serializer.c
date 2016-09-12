@@ -13,6 +13,7 @@
 
 int read_int_from_buffer(char *buffer, int *global_index);
 char *read_string_from_buffer(char *buffer, int *global_index, int length);
+unsigned char *read_ip_from_buffer(char *buffer, int *global_index);
 int cmp(void *a, void *b);
 
 void write_int_to_buffer(char *buffer, int *global_index, int integer);
@@ -31,7 +32,9 @@ void write_n_bytes_to_buffer(char *buffer, int *global_index, int n, unsigned ch
 char *serialize(packet_t *packet, int *psize) 
 {
 	int global_index = 0;
+	/*
 	int len;
+	*/
 	int size = 0;
 	int header_size = 0;
 	char *buffer = NULL;
@@ -117,9 +120,12 @@ char *serialize(packet_t *packet, int *psize)
 	if (packet->users) {
 		write_int_to_buffer(buffer, &global_index, packet->list_len);
 		for (n = packet->users->head; n; n = n->next) {
+			/*
 			len = (int)strlen((char *)n->data);
 			write_int_to_buffer(buffer, &global_index, len);
 			write_string_to_buffer(buffer, &global_index, len, (char *)n->data);
+			*/
+			write_n_bytes_to_buffer(buffer, &global_index, 4, n->data);
 		}
 	} else {
 		write_int_to_buffer(buffer, &global_index, 0);
@@ -140,8 +146,10 @@ packet_t *deserialize(char *bytes, p_header_t *header)
 	packet_t *packet;
 	int global_index = 0;
 	int i			 = 0;
+	/*
 	int slen		 = 0;
-	char *string	 = NULL;
+	*/
+	unsigned char *string	 = NULL;
 
 	int name_len	= 0;
 	int data_len	= 0;
@@ -177,9 +185,11 @@ packet_t *deserialize(char *bytes, p_header_t *header)
 		init_queue(&users, cmp, free);
 	}
 	for (i = 0; i < list_len; i++) {
+		/*
 		slen = read_int_from_buffer(bytes, &global_index);
-		list_size += slen + sizeof(int);
-		string = read_string_from_buffer(bytes, &global_index, slen);
+		*/
+		list_size += 4;
+		string = read_ip_from_buffer(bytes, &global_index);
 		insert_node(users, string);
 	}
 
@@ -232,6 +242,21 @@ char *read_string_from_buffer(char *bytes, int *global_index, int length)
 	string[length] = '\0';
 	*global_index += length * 2;
 	return string;
+}
+
+unsigned char *read_ip_from_buffer(char *buffer, int *global_index)
+{
+	int i = 0;
+	unsigned char *ip = NULL;
+
+	ip = malloc(4);
+
+	for (i = 0; i < 4; i++) {
+		ip[i] = (unsigned char)buffer[*global_index + i];
+	}
+
+	*global_index += 4;
+	return ip;
 }
 
 int cmp(void *a, void *b) 

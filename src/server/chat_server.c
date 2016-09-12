@@ -25,8 +25,9 @@ int main (void)
 	int *ports;
 	char line[100];
 
-	ports = malloc(sizeof(int));
-	ports[0] = 8002;
+	ports = malloc(2 * sizeof(int));
+	ports[0] = 8001;
+	ports[1] = 8002;
 
 	printf("Starting up server\n");
 
@@ -37,7 +38,7 @@ int main (void)
 	/* data structures for the threads that listen for incomming data */
 	/* and connections and sends out data to the various different users */
 	speaker = new_server_speaker(users);
-	listener = new_server_listener(ports, 1, users, speaker);
+	listener = new_server_listener(ports, 2, users, speaker);
 
 	/* Launch the two threads */
 	/* args are: the thread, unused attribute, start function, and argument for
