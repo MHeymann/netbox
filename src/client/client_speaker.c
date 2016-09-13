@@ -247,15 +247,19 @@ int speaker_login(client_speaker_t *speaker, char *pw)
 	fd_set readfds;
 	int act;
 
+	/*
 	printf("Connecting\n");
 	if (!connect_speaker(speaker)) {
 		fprintf(stderr, "Failed to connect to server\n");
 		return FALSE;
 	}
 	printf("Connected\n");
+	*/
+	printf("in client login function of speaker\n");
 
 	packet = new_packet(LOGIN, speaker->client_ip, 
 			speaker_strdup(pw), NULL);
+	printf("%d.%d.%d.%d\n", speaker->client_ip[0], speaker->client_ip[1], speaker->client_ip[2], speaker->client_ip[3]);
 
 	printf("Sending log in packet\n");
 	if (!speaker_send_packet(speaker, packet)) {

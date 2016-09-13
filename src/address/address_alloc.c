@@ -93,6 +93,11 @@ address_alloc_t *new_address_allocator()
 	return addresses;
 }
 
+void free_address_allocator(address_alloc_ptr allocator)
+{
+	free(allocator);
+}
+
 void print_address(unsigned char *address)
 {
 	int i;

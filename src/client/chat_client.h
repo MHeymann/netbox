@@ -16,12 +16,14 @@
 /*** Struct Definition ***************************************************/
 
 typedef struct client {
+	int internal;
 	pthread_t *listen_thread;
 	client_speaker_t *speaker;
 	client_listener_t *listener;
 	int connected_status;
 	pthread_mutex_t *connection_mutex;
 	unsigned char *client_ip;
+	unsigned char client_mac[6];
 	char *hostname;
 	int hostport;
 } chat_client_t;

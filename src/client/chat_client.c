@@ -3,6 +3,11 @@
 #include <string.h>
 
 #include "chat_client.h"
+#include "../packet/packet.h"
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 /*** Struct Definition ***************************************************/
 
@@ -28,6 +33,7 @@ void broken_connection(chat_client_t *client);
 int	is_internal(char *s);
 void read_line(FILE *f, char *line);
 void print_usage();
+int connect_client(char *hostname, int hostport, int *sd);
 
 char ch = '\0';
 
@@ -46,6 +52,8 @@ int main (int argc, char *argv[])
 	char *message = NULL;
 	unsigned char dst_ip[4];
 	int dst_ip_int[4];
+	int sd;
+	packet_t *packet = NULL;
 	/* for strtol error checking */
 	/*
 	char *endptr;
@@ -73,21 +81,29 @@ int main (int argc, char *argv[])
 	if (argc > 2) {
 		if (is_internal(argv[2])) {
 			host_port = 8001;
+			client->internal = TRUE;
 		} else {
 			host_port = 8002;
+			client->internal = FALSE;
 		}
 	} else {
 		printf("Are you an internal or external client? ([I]/e) ");
 		read_line(stdin, line);
 		if (strlen(line) == 0) {
 			host_port = 8001;
+			client->internal = TRUE;
 		} else if (is_internal(line)) {
 			host_port = 8001;
 		} else {
 			host_port = 8002;
+			client->internal = FALSE;
 		}
 	}
-	goto GIVE_UNAME;
+	if (!client->internal) {
+		goto GIVE_UNAME;
+	} else {
+		goto CONNECT;
+	}
 
 	/* get the relevant data for logging in with */
 ESTABLISH_CONNECTION:
@@ -112,8 +128,16 @@ GIVE_PORT:
 			host_port = 8001;
 		} else if (is_internal(line)) {
 			host_port = 8001;
+			client->internal = TRUE;
 		} else {
 			host_port = 8002;
+			client->internal = FALSE;
+		}
+
+		if (!client->internal) {
+			goto GIVE_UNAME;
+		} else {
+			goto CONNECT;
 		}
 			
 GIVE_UNAME:
@@ -127,26 +151,63 @@ GIVE_UNAME:
 		client_ip[1] = (unsigned char)client_ip_int[1];
 		client_ip[2] = (unsigned char)client_ip_int[2];
 		client_ip[3] = (unsigned char)client_ip_int[3];
-	
+
+CONNECT:
+
+		/*
 		printf("Please provide a password: ");
 		if (0 == scanf("%s", line)) {
 			fprintf(stderr, "problem reading password\n");
 		}
 		password = client_strdup(line);
+		*/
 	
 		/* Flash some details for easy error spotting by user */
+		printf("Connect details\n");
 		printf("About to connect to %s:%d\n", hostname, host_port);
-		printf("Login details\n");
-		printf("\tclient_ip: %d.%d.%d.%d\n", client_ip[0], client_ip[1], 
-				client_ip[2], client_ip[3]);
+		if (!client->internal) {
+			printf("\tclient_ip: %d.%d.%d.%d\n", client_ip[0], client_ip[1], 
+					client_ip[2], client_ip[3]);
+		}
+		/*
 		printf("\tpassword: %s\n", password);
+		*/
 
 		/* Set to client.  Note that these will be free'd in free_client */
-		client->client_ip = client_ipdup(client_ip);
 		client->hostname = hostname;
 		client->hostport = host_port;
 
+		if (connect_client(hostname, host_port, &sd)) {
+			printf("Connected!  sd %d\n", sd);
+		} else {
+			printf("Failded to connect!\n");
+			exit(1);
+		}
+
+		printf("receiving details from server\n");
+		packet = receive_packet(sd);
+		printf("received details from server\n");
+		if (client->internal) {
+			client_ip[0] = packet->header.dst_ip[0];
+			client_ip[1] = packet->header.dst_ip[1];
+			client_ip[2] = packet->header.dst_ip[2];
+			client_ip[3] = packet->header.dst_ip[3];
+			client->connected_status = TRUE;
+		}
+		client->client_ip = client_ipdup(client_ip);
+		
+		printf("copying mac over\n");
+		client->client_mac[0] = packet->header.dst_mac[0];
+		client->client_mac[1] = packet->header.dst_mac[1];
+		client->client_mac[2] = packet->header.dst_mac[2];
+		client->client_mac[3] = packet->header.dst_mac[3];
+		client->client_mac[4] = packet->header.dst_mac[4];
+		client->client_mac[5] = packet->header.dst_mac[5];
+
+		printf("freeing packet\n");
+		free_packet(packet);
 	
+		printf("creating a speaker\n");
 		/* Create a speaker */
 		if ((client->speaker = new_client_speaker(client_ip, hostname, host_port)) == NULL) {
 			fprintf(stderr, "Failed to create speaker\n");
@@ -155,21 +216,26 @@ GIVE_UNAME:
 			password = NULL;
 			exit(2);
 		}
+		printf("setting sd in speaker\n");
+		client->speaker->sd = sd;
 		/* 
 		 * Send login details over the new speaker. This entails
 		 * creating a connection and also sending client_ip and password 
 		 */
-		if (!speaker_login(client->speaker, password)) {
-			fprintf(stderr, "Failed to login\n");
-			free_chat_client(client);
-			client = new_client();
-			free(password);
-			password = NULL;
-		} else {
-			/* success */
-			client->connected_status = TRUE;
-			free(password);
-			password = NULL;
+		if (!client->internal) {
+			printf("loggin my ip\n");
+			if (!speaker_login(client->speaker, "mewp")) {
+				fprintf(stderr, "Failed to login\n");
+				free_chat_client(client);
+				client = new_client();
+				free(password);
+				password = NULL;
+			} else {
+				/* success */
+				client->connected_status = TRUE;
+				free(password);
+				password = NULL;
+			}
 		}
 	} /* while connecting */
 
@@ -344,6 +410,7 @@ chat_client_t *new_client()
 		return NULL;
 	} 
 
+	client->internal = TRUE;
 	/* init all as NULL or similar */
 	client->connected_status = FALSE;
 	/*
@@ -538,4 +605,34 @@ void print_usage(char **argv)
 	printf("\x1b[1;31mUSAGE\x1b[0m: %s hostaddress [i/e]\n", argv[0]);
 	printf("\thostaddress can be \"localhost\" ");
 	printf("and will convert to 127.0.0.1\n");
+}
+/* Get a socket and connect it to the server */
+
+int connect_client(char *hostname, int hostport, int *sd)
+{
+	int sockfd;
+	struct sockaddr_in addr;
+
+	/* create a new socket */
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("Problem creating socket\n");
+		return FALSE;
+	}
+	
+	/* clear the memory values of addr */
+	memset(&addr, 0, sizeof(addr));
+	/* set the address to the server's ip and port */
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = inet_addr(hostname);
+	addr.sin_port = htons(hostport);
+
+	/* connect */
+	if (connect(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		perror("Problem connecting to server\n");
+		*sd = 0;
+		return FALSE;
+	} else {
+		*sd = sockfd;
+		return TRUE;
+	}
 }

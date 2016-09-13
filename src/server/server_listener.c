@@ -94,6 +94,9 @@ server_listener_t *new_server_listener(int *ports, int port_count, users_t *user
 	listener->users = users;
 	listener->speaker = speaker;
 
+	listener->ip_allocator = new_address_allocator();
+	listener->mac_allocator = new_mac_list();
+
 	return listener;
 }
 
@@ -126,6 +129,16 @@ void server_listener_free(server_listener_t *listener)
 	if (listener->speaker) {
 		/* this gets free'd in main */
 		listener->speaker = NULL;
+	}
+
+	if (listener->ip_allocator) {
+		free_address_allocator(listener->ip_allocator);
+		listener->ip_allocator = NULL;
+	}
+
+	if (listener->mac_allocator) {
+		free_mac_list(listener->mac_allocator);
+		listener->mac_allocator = NULL;
 	}
 
 	free(listener);
@@ -193,6 +206,8 @@ void listener_go(server_listener_t *listener)
 	queue_t *online_list2 = NULL;
 	node_t *n = NULL;
 	struct timeval tv;
+	unsigned char *ip_add = NULL;
+	unsigned char *mac_add = NULL;
 
 	packet_t *packet = NULL;
 	packet_t *p = NULL;
@@ -302,6 +317,58 @@ void listener_go(server_listener_t *listener)
 
 				/* add to users */
 				add_connection(listener->users, new_socket);
+
+				if (i == 0) {
+					/* internal user */
+					/* generate ip */
+					ip_add = allocate_address(listener->ip_allocator);
+
+					/* check if ip available */
+					while (!login_connection(listener->users, new_socket, ip_add)) {
+						free(ip_add);
+						ip_add = allocate_address(listener->ip_allocator);
+					}
+
+					/* generate mac */
+					mac_add = gen_mac(listener->mac_allocator);
+					packet = new_packet(LOGIN, ip_add, NULL, ip_add);
+					packet->header.dst_mac[0] = mac_add[0];
+					packet->header.dst_mac[1] = mac_add[1];
+					packet->header.dst_mac[2] = mac_add[2];
+					packet->header.dst_mac[3] = mac_add[3];
+					packet->header.dst_mac[4] = mac_add[4];
+					packet->header.dst_mac[5] = mac_add[5];
+
+					/* send to user */
+					send_packet(packet, new_socket);
+					free_packet(packet);
+					packet = NULL;
+					free(ip_add);
+					ip_add = NULL;
+					/*
+					free(mac_add);
+					mac_add = NULL;
+					*/
+					
+				} else {
+					/* external user */
+					/* generate mac */
+					mac_add = gen_mac(listener->mac_allocator);
+					packet = new_packet(LOGIN, NULL, NULL, NULL);
+					packet->header.dst_mac[0] = mac_add[0];
+					packet->header.dst_mac[1] = mac_add[1];
+					packet->header.dst_mac[2] = mac_add[2];
+					packet->header.dst_mac[3] = mac_add[3];
+					packet->header.dst_mac[4] = mac_add[4];
+					packet->header.dst_mac[5] = mac_add[5];
+
+					/* send to user */
+					send_packet(packet, new_socket);
+					free_packet(packet);
+					packet = NULL;
+					free(mac_add);
+					mac_add = NULL;
+				}
 			}
 		}
 
@@ -335,7 +402,14 @@ void listener_go(server_listener_t *listener)
 					broadcast(listener->speaker, packet);
 				} else if (packet->code == LOGIN) {
 					printf("got login packet\n");
-					if ((check_user_password(packet->header.src_ip, packet->data)) && 
+
+					if (is_private_address(packet->header.src_ip)) {
+						printf("Invalid external ip address\n");
+						p = new_packet(SEND, null_address, listen_strdup("denial"), packet->header.src_ip);
+						send_packet(p, sd);
+						free_packet(p);
+						p = NULL;
+					} else if ((check_user_password(packet->header.src_ip, packet->data)) && 
 							login_connection(listener->users, sd, packet->header.src_ip)) {
 						push_user_list(listener->speaker);
 						/* !!!!!!!!!!!!!! */

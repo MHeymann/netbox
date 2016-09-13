@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include "server_speaker.h"
 #include "users.h"
+#include "../address/address_alloc.h"
+#include "../address/macs.h"
 
 #define TRUE	1
 #define FALSE	0
@@ -17,6 +19,8 @@ typedef struct listener {
 	pthread_mutex_t *status_lock;
 	users_t *users;
 	server_speaker_t *speaker;
+	address_alloc_ptr ip_allocator;
+	mac_list_t *mac_allocator;
 } server_listener_t;
 
 /*** Function Prototypes *************************************************/

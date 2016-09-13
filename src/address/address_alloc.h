@@ -20,6 +20,8 @@ unsigned char *allocate_address(address_alloc_ptr);
 
 address_alloc_ptr new_address_allocator();
 
+void free_address_allocator(address_alloc_ptr allocator);
+
 void print_address(unsigned char *address);
 
 int is_private_address(unsigned char *address);
