@@ -41,7 +41,7 @@ char *serialize(packet_t *packet, int *psize)
 	node_t *n = NULL;
 
 	/* headers: ethernet + tcp */
-	header_size = 22 + 20;
+	header_size = 22 + 20 + 2 * sizeof(int);
 	
 
 	/* payload sizes */
@@ -91,6 +91,9 @@ char *serialize(packet_t *packet, int *psize)
 
 	write_n_bytes_to_buffer(buffer, &global_index, 4, packet->header.dst_ip);
 	write_n_bytes_to_buffer(buffer, &global_index, 4, packet->header.src_ip);
+
+	write_int_to_buffer(buffer, &global_index, packet->header.dst_port);
+	write_int_to_buffer(buffer, &global_index, packet->header.src_port);
 
 	write_int_to_buffer(buffer, &global_index, size);
 

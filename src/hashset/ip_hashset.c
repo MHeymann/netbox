@@ -81,6 +81,15 @@ void ip_hashset_init(ip_hashset_ptr *hs, int init_delta, int delta_diff)
 	*hs = hset;
 }
 
+void ip_hashset_update(ip_hashset_ptr hs, unsigned char *ipkey, int val)
+{
+	long vall;
+
+	vall = val;
+	ht_update(hs->ht, (void *)ipkey, (void *)vall, s_dud_free);
+}
+
+
 /**
  * Insert a string instance into the ip_hashset.
  *

@@ -10,6 +10,7 @@
 
 #include "server_listener.h"
 #include "users.h"
+#include "ipbinds.h"
 #include "../packet/code.h"
 #include "../hashset/fd_hashset.h"
 #include "../hashset/ip_hashset.h"
@@ -331,7 +332,7 @@ void listener_go(server_listener_t *listener)
 
 					/* generate mac */
 					mac_add = gen_mac(listener->mac_allocator);
-					packet = new_packet(LOGIN, ip_add, NULL, ip_add);
+					packet = new_packet(LOGIN, ip_add, NULL, ip_add, 8001, 8001);
 					packet->header.dst_mac[0] = mac_add[0];
 					packet->header.dst_mac[1] = mac_add[1];
 					packet->header.dst_mac[2] = mac_add[2];
@@ -354,7 +355,7 @@ void listener_go(server_listener_t *listener)
 					/* external user */
 					/* generate mac */
 					mac_add = gen_mac(listener->mac_allocator);
-					packet = new_packet(LOGIN, NULL, NULL, NULL);
+					packet = new_packet(LOGIN, NULL, NULL, NULL, 8001, 8001);
 					packet->header.dst_mac[0] = mac_add[0];
 					packet->header.dst_mac[1] = mac_add[1];
 					packet->header.dst_mac[2] = mac_add[2];
@@ -394,6 +395,7 @@ void listener_go(server_listener_t *listener)
 					push_user_list(listener->speaker);
 					close(sd);
 				} else if (packet->code == SEND) {
+					printf("adding packet to queue\n");
 					add_packet_to_queue(listener->speaker, packet);
 					packet = NULL;
 				} else if (packet->code == ECHO) {
@@ -405,7 +407,7 @@ void listener_go(server_listener_t *listener)
 
 					if (is_private_address(packet->header.src_ip)) {
 						printf("Invalid external ip address\n");
-						p = new_packet(SEND, null_address, listen_strdup("denial"), packet->header.src_ip);
+						p = new_packet(SEND, null_address, listen_strdup("denial"), packet->header.src_ip, 8002, packet->header.src_port);
 						send_packet(p, sd);
 						free_packet(p);
 						p = NULL;
@@ -413,13 +415,13 @@ void listener_go(server_listener_t *listener)
 							login_connection(listener->users, sd, packet->header.src_ip)) {
 						push_user_list(listener->speaker);
 						/* !!!!!!!!!!!!!! */
-						p = new_packet(SEND, null_address, listen_strdup("accept"), packet->header.src_ip);
+						p = new_packet(SEND, null_address, listen_strdup("accept"), packet->header.src_ip, 8002, packet->header.src_port);
 						send_packet(p, sd);
 						free_packet(p);
 						p = NULL;
 					} else {
 						/* !!!!!!!!!!!!!! */
-						p = new_packet(SEND, null_address, listen_strdup("denial"), packet->header.src_ip);
+						p = new_packet(SEND, null_address, listen_strdup("denial"), packet->header.src_ip, 8002, packet->header.src_port);
 						send_packet(p, sd);
 						free_packet(p);
 						p = NULL;

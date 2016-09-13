@@ -41,6 +41,7 @@ char ch = '\0';
 
 int main (int argc, char *argv[]) 
 {
+	int port;
 	chat_client_t *client = NULL; /* an instance of a client for methods */
 	char line[MAX_LINE]; /* a buffer for when text is being entered */
 	char *localhost = "localhost"; /* a string for easily comparison */
@@ -54,10 +55,6 @@ int main (int argc, char *argv[])
 	int dst_ip_int[4];
 	int sd;
 	packet_t *packet = NULL;
-	/* for strtol error checking */
-	/*
-	char *endptr;
-	*/
 	/* the port of the relevant server */
 	int host_port;
 	int ret;
@@ -195,6 +192,8 @@ CONNECT:
 			client->connected_status = TRUE;
 		}
 		client->client_ip = client_ipdup(client_ip);
+		printf("My ip is: %d.%d.%d.%d\n", client_ip[0], client_ip[1], 
+				client_ip[2], client_ip[3]);
 		
 		printf("copying mac over\n");
 		client->client_mac[0] = packet->header.dst_mac[0];
@@ -286,13 +285,7 @@ CONNECT:
 			dst_ip[1] = dst_ip_int[1];
 			dst_ip[2] = dst_ip_int[2];
 			dst_ip[3] = dst_ip_int[3];
-			/*
-			to = client_strdup(line);
-			if (!to) {
-				printf("some error copying recipient name\n");
-				continue;
-			}
-			*/
+
 			printf("Type the message to be sent: \n");
 			printf(">> ");
 			read_line(stdin, line);
@@ -300,13 +293,14 @@ CONNECT:
 			message = client_strdup(line);
 			if (!message) {
 				printf("some error copying message\n");
-				/*
-				free(to);
-				to = NULL;
-				*/
 				continue;
 			}
-			if (send_string(client->speaker, message, dst_ip)) {
+
+			printf("Type the target port to be sent to: \n");
+			printf(">> ");
+			read_line(stdin, line);
+			sscanf(line, "%d", &port);
+			if (send_string(client->speaker, message, dst_ip, port)) {
 				printf("%d.%d.%d.%d to %d.%d.%d.%d : %s\n", 
 						(int)client->client_ip[0], 
 						(int)client->client_ip[1], 
@@ -318,12 +312,9 @@ CONNECT:
 			} else {
 				printf("Some error sending message\n");
 			}
-			/*
-			free(to);
-			to = NULL;
-			*/
 			free(message);
 			message = NULL;
+	/*
 		} else if (strcmp(line, "broadcast") == 0) {
 			printf("Type the message to be broadcast: \n");
 			printf(">> ");
@@ -342,6 +333,7 @@ CONNECT:
 
 			free(message);
 			message = NULL;
+	*/
 		} else if (strcmp(line, "echo") == 0) {
 			printf("Type the message to be echoed: \n");
 			printf(">> ");

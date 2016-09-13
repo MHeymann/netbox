@@ -24,6 +24,12 @@ int main (void)
 	server_listener_t *listener;
 	int *ports;
 	char line[100];
+	unsigned char serv_ip[4] = {
+		1,
+		2,
+		3,
+		4
+	};
 
 	ports = malloc(2 * sizeof(int));
 	ports[0] = 8001;
@@ -37,7 +43,7 @@ int main (void)
 	
 	/* data structures for the threads that listen for incomming data */
 	/* and connections and sends out data to the various different users */
-	speaker = new_server_speaker(users);
+	speaker = new_server_speaker(users, serv_ip);
 	listener = new_server_listener(ports, 2, users, speaker);
 
 	/* Launch the two threads */

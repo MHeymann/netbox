@@ -52,7 +52,8 @@ void get_online_names(client_speaker_t *speaker);
  * @param[in] s:		The string to be sent as a message.
  * @param[in] to:		The username of the recipient.
  */
-int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip);
+int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip,
+		int port);
 
 /**
  * Send a string to the server to be echoed back. 

@@ -51,6 +51,8 @@ void ip_hashset_init_defaults(ip_hashset_ptr *hs);
  */
 void ip_hashset_init(ip_hashset_ptr *hs, int init_delta, int delta_diff);
 
+void ip_hashset_update(ip_hashset_ptr hs, unsigned char *ipkey, int val);
+
 /**
  * Insert a game instance into the ip_hashset.
  *

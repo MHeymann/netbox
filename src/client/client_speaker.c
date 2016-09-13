@@ -131,7 +131,7 @@ void free_speaker(client_speaker_t *speaker)
  */
 void get_online_names(client_speaker_t *speaker)
 {
-	packet_t *packet = new_packet(GET_ULIST, speaker->client_ip, NULL, NULL);
+	packet_t *packet = new_packet(GET_ULIST, speaker->client_ip, NULL, NULL, 8002, 8002);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send packet to request user list\n");
@@ -149,10 +149,11 @@ void get_online_names(client_speaker_t *speaker)
  * @param[in] s:		The string to be sent as a message.
  * @param[in] to:		The username of the recipient.
  */
-int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip)
+int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip, 
+		int port)
 {
 	packet_t *packet = new_packet(SEND, speaker->client_ip, 
-			speaker_strdup(s), dst_ip);
+			speaker_strdup(s), dst_ip, 8002, port);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send message packet\n");
@@ -178,7 +179,7 @@ int send_string(client_speaker_t *speaker, char *s, unsigned char *dst_ip)
 int echo_string(client_speaker_t *speaker, char *s)
 {
 	packet_t *packet = new_packet(ECHO, speaker->client_ip, 
-			speaker_strdup(s), NULL);
+			speaker_strdup(s), NULL, 8002, 8002);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send packet for echoing\n");
@@ -205,7 +206,7 @@ int echo_string(client_speaker_t *speaker, char *s)
 int broadcast_string(client_speaker_t *speaker, char *s)
 {
 	packet_t *packet = new_packet(BROADCAST, speaker->client_ip, 
-			speaker_strdup(s), NULL);
+			speaker_strdup(s), NULL, 8002, 8002);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr, "Failed to send packet to broadcast with\n");
@@ -258,7 +259,7 @@ int speaker_login(client_speaker_t *speaker, char *pw)
 	printf("in client login function of speaker\n");
 
 	packet = new_packet(LOGIN, speaker->client_ip, 
-			speaker_strdup(pw), NULL);
+			speaker_strdup(pw), NULL, 8002, 8002);
 	printf("%d.%d.%d.%d\n", speaker->client_ip[0], speaker->client_ip[1], speaker->client_ip[2], speaker->client_ip[3]);
 
 	printf("Sending log in packet\n");
@@ -319,7 +320,7 @@ int speaker_login(client_speaker_t *speaker, char *pw)
 int speaker_logoff(client_speaker_t *speaker)
 {
 	packet_t *packet = new_packet(QUIT, speaker->client_ip, 
-			NULL, NULL);
+			NULL, NULL, 8002, 8002);
 	if (packet) {
 		if (!speaker_send_packet(speaker, packet)) {
 			fprintf(stderr,

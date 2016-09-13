@@ -4,6 +4,7 @@
 #include <semaphore.h>
 #include "../queue/queue.h"
 #include "../packet/packet.h"
+#include "ipbinds.h"
 #include "users.h"
 
 #define TRUE	1
@@ -16,6 +17,8 @@ typedef struct speaker {
 	queue_t *q;
 	int run_status;
 	pthread_mutex_t *status_lock;
+	ipbinds_t *iptable;
+	unsigned char serv_ip[4];
 } server_speaker_t;
 
 /**
@@ -25,7 +28,7 @@ typedef struct speaker {
  *
  * @return The new data structure.
  */
-server_speaker_t *new_server_speaker(users_t *users);
+server_speaker_t *new_server_speaker(users_t *users, unsigned char *serv_ip);
 
 /**
  * Free the struct.

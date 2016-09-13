@@ -23,6 +23,9 @@ typedef struct p_headder {
 
 	unsigned char dst_ip[4];
 	unsigned char src_ip[4];
+
+	int dst_port;
+	int src_port;
 } p_header_t;
 
 typedef struct packet {
@@ -67,7 +70,7 @@ packet_t *new_empty_packet();
  * @return	The memory address of the newly allocated packet, or NULL
  *			if something goes wrong.
  */
-packet_t *new_packet(int code, unsigned char *src_ip, char *data, unsigned char*dst_ip);
+packet_t *new_packet(int code, unsigned char *src_ip, char *data, unsigned char *dst_ip, int src_port, int dst_port);
 
 /** 
  * Free the a given packet.

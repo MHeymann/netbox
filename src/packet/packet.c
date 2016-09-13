@@ -65,6 +65,9 @@ packet_t *new_empty_packet()
 	bzero(packet->header.src_ip, 4);
 	bzero(packet->header.dst_ip, 4);
 
+	packet->header.src_port = 0;
+	packet->header.dst_port = 0;
+
 	packet->code = -1;
 
 	packet->name = NULL; 
@@ -95,7 +98,7 @@ packet_t *new_empty_packet()
  * @return	The memory address of the newly allocated packet, or NULL
  *			if something goes wrong.
  */
-packet_t *new_packet(int code, unsigned char *src_ip, char *data, unsigned char *dst_ip)
+packet_t *new_packet(int code, unsigned char *src_ip, char *data, unsigned char *dst_ip, int src_port, int dst_port)
 {
 	int i;
 	packet_t *packet = NULL;
@@ -107,6 +110,8 @@ packet_t *new_packet(int code, unsigned char *src_ip, char *data, unsigned char 
 		return NULL;
 	}
 
+	packet->header.src_port = src_port;
+	packet->header.dst_port = dst_port;
 	packet->code = code;
 
 	if (src_ip) {
@@ -348,6 +353,9 @@ packet_t *receive_packet(int fd)
 	
 	r = read(fd, (void *)(header.dst_ip), 4);
 	r = read(fd, (void *)(header.src_ip), 4);
+
+	r = read(fd, (void *)(&header.dst_port), sizeof(int));
+	r = read(fd, (void *)(&header.src_port), sizeof(int));
 
 	r = read(fd, (void *)(b), sizeof(int));
 	

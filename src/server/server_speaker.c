@@ -4,12 +4,14 @@
 
 #include "../packet/code.h"
 #include "server_speaker.h"
+#include "../address/address_alloc.h"
 /*
 typedef struct speaker {
 	users_t *users;
 	sem_t *queue_sem;
 	pthread_mutex_t *queue_lock;
 	queue_t *q;
+	unsigned char serv_ip[4]
 } server_speaker_t;
 */
 
@@ -19,6 +21,7 @@ int cmp_dummy(void *a, void *b);
 char *speak_strdup(char *s);
 void speaker_go(server_speaker_t *speaker);
 unsigned char *speak_ipdup(unsigned char *s);
+int is_server_address(unsigned char *ip, unsigned char *sip);
 
 /*** Functions ***********************************************************/
 
@@ -29,7 +32,7 @@ unsigned char *speak_ipdup(unsigned char *s);
  *
  * @return The new data structure.
  */
-server_speaker_t *new_server_speaker(users_t *users)
+server_speaker_t *new_server_speaker(users_t *users, unsigned char *serv_ip)
 {
 	server_speaker_t *speaker = NULL;
 	queue_t *q = NULL;
@@ -39,6 +42,11 @@ server_speaker_t *new_server_speaker(users_t *users)
 		fprintf(stderr, "failed to malloc server_speaker\n");
 		return NULL;
 	}
+	speaker->serv_ip[0] = serv_ip[0];
+	speaker->serv_ip[1] = serv_ip[1];
+	speaker->serv_ip[2] = serv_ip[2];
+	speaker->serv_ip[3] = serv_ip[3];
+
 	speaker->users = users;
 	speaker->queue_sem = malloc(sizeof(sem_t));
 	if (!speaker->queue_sem) {
@@ -64,6 +72,8 @@ server_speaker_t *new_server_speaker(users_t *users)
 	speaker->run_status = TRUE;
 	speaker->status_lock = malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(speaker->status_lock, NULL);
+
+	speaker->iptable = new_ipbinds();
 
 	return speaker;
 }
@@ -95,6 +105,10 @@ void server_speaker_free(server_speaker_t *speaker)
 		pthread_mutex_destroy(speaker->status_lock);
 		free(speaker->status_lock);
 		speaker->status_lock = NULL;
+	}
+	if (speaker->iptable) {
+		free_ipbinds(speaker->iptable);
+		speaker->iptable = NULL;
 	}
 	free(speaker);
 }
@@ -130,7 +144,7 @@ void push_user_list(server_speaker_t *speaker)
 
 	for (n = ips->head; n; n = n->next) {
 		packet = NULL;
-		packet = new_packet(GET_ULIST,(unsigned char *)n->data, NULL, (unsigned char *)n->data);
+		packet = new_packet(GET_ULIST,(unsigned char *)n->data, NULL, (unsigned char *)n->data, 8001, 8001);
 		set_user_list(packet, ips);
 
 		add_packet_to_queue(speaker, packet);
@@ -163,7 +177,8 @@ void broadcast(server_speaker_t *speaker, packet_t *packet)
 		printf("%d.%d.%d.%d to be added for broadcasting\n", ptr[0], ptr[1], ptr[2], ptr[3]);
 		copy = NULL;
 		copy = new_packet(packet->code, packet->header.src_ip, 
-				speak_strdup(packet->data), (unsigned char *)n->data);
+				speak_strdup(packet->data), (unsigned char *)n->data, 
+				packet->header.src_port, packet->header.dst_port);
 		add_packet_to_queue(speaker, copy);
 	}
 	free_queue(ips);
@@ -236,6 +251,10 @@ char *speak_strdup(char *s)
 void speaker_go(server_speaker_t *speaker)
 {
 	packet_t *packet = NULL;
+	packet_t *temp = NULL;
+	int port;
+	unsigned char *ip;
+
 	queue_t *online_users = NULL;
 	while(TRUE) {
 		/* wait for the semaphore to be increased, indicating 
@@ -252,7 +271,51 @@ void speaker_go(server_speaker_t *speaker)
 
 		/* handle packet according to it's code */
 		if (packet->code == SEND) {
-			printf("Sending message: %d.%d.%d.%d -> %d.%d.%d.%d %s\n", 
+			 if ((is_private_address(packet->header.src_ip)) && (!is_private_address(packet->header.dst_ip))) {
+				temp = packet;
+				packet = NULL;
+				if ((port = ip_get_bound_port(speaker->iptable, temp->header.src_ip)) == FALSE) {
+					for (port = 1; !bind_ip_to_port(speaker->iptable, temp->header.src_ip, port); port++);
+					printf("%d.%d.%d.%d bound to %d\n",
+							temp->header.src_ip[0],
+							temp->header.src_ip[1],
+							temp->header.src_ip[2],
+							temp->header.src_ip[3],
+							port
+							);
+				}
+				printf("port 1 used to send out of\n");
+
+				packet = new_packet(SEND, speaker->serv_ip, speak_strdup(temp->data), temp->header.dst_ip, port, temp->header.dst_port);
+				/*
+				packet->header.src_port = port;
+				packet->header.dst_port = temp->header.dst_port;
+				*/
+				free_packet(temp);
+			} else if ((!is_private_address(packet->header.src_ip)) && (is_server_address(packet->header.dst_ip, speaker->serv_ip))) {
+				printf("Looking up %d\n", packet->header.dst_port);
+				if ((ip = port_get_bound_ip(speaker->iptable, packet->header.dst_port)) == NULL) {
+					printf("This port is unbound.");
+					free_packet(packet);
+					packet = NULL;
+				} else {
+					temp = packet;
+					packet = new_packet(SEND, temp->header.src_ip, speak_strdup(temp->data), ip, temp->header.src_port, 8001);
+
+					packet->header.src_port = temp->header.src_port;
+					packet->header.dst_port = 8001;
+					free_packet(temp);
+					temp = NULL;
+				}
+			} else if ((!is_private_address(packet->header.src_ip)) && (!is_private_address(packet->header.dst_ip))) {
+				printf("Dropping packet, not allowed to route from extern to extern\n");
+				free_packet(packet);
+				packet = NULL;
+			} else {
+				/* internal to internal, nothing to do */
+			}
+			if (packet) {
+				printf("Sending message: %d.%d.%d.%d -> %d.%d.%d.%d %s\n", 
 					(int)packet->header.src_ip[0], 
 					(int)packet->header.src_ip[1], 
 					(int)packet->header.src_ip[2], 
@@ -262,6 +325,9 @@ void speaker_go(server_speaker_t *speaker)
 					(int)packet->header.dst_ip[2], 
 					(int)packet->header.dst_ip[3], 
 					packet->data);
+			} else {
+				printf("dropped packet\n");
+			}
 		} else if (packet->code == GET_ULIST) {
 			online_users = NULL;
 			if (packet->users == NULL) {
@@ -283,9 +349,11 @@ void speaker_go(server_speaker_t *speaker)
 					packet->header.src_ip[2], 
 					packet->header.src_ip[3]);
 		}
-		users_send_packet(speaker->users, packet);
-		free_packet(packet);
-		packet = NULL;
+		if (packet) {
+			users_send_packet(speaker->users, packet);
+			free_packet(packet);
+			packet = NULL;
+		}
 	}
 }
 
@@ -301,4 +369,15 @@ unsigned char *speak_ipdup(unsigned char *s)
 		c[i] = s[i];
 	}
 	return c;
+}
+
+int is_server_address(unsigned char *ip, unsigned char *sip) 
+{
+	int i;
+	for (i = 0; i < 4; i++) {
+		if (ip[i] != sip[i]) {
+			return FALSE;
+		}
+	}
+	return TRUE;
 }
