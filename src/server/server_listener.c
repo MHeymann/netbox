@@ -346,10 +346,6 @@ void listener_go(server_listener_t *listener)
 					packet = NULL;
 					free(ip_add);
 					ip_add = NULL;
-					/*
-					free(mac_add);
-					mac_add = NULL;
-					*/
 					
 				} else {
 					/* external user */

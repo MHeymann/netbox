@@ -82,7 +82,13 @@ queue_t *ipbinds_get_ips(ipbinds_t *ipbinds)
 int ip_get_bound_port(ipbinds_t *ipbinds, unsigned char *ip)
 {
 	int port = ip_get_fd(ipbinds->ips, ip);
+	int last_time, this_time;
 	if (port) {
+		this_time = (int)time(NULL);
+		last_time = ip_get_time(ipbinds, ip);
+		printf("%d %d\n", this_time, last_time);
+		printf("time since last lookup: %d seconds\n", 
+				this_time - last_time);
 		ip_hashset_update(ipbinds->timestamps, ip, (int)time(NULL));
 	}
 	return port;
@@ -187,6 +193,13 @@ int bind_ip_to_port(ipbinds_t *ipbinds, unsigned char *ip, int port)
 		printf("failed to insert into ip list\n");
 		pthread_mutex_unlock(ipbinds->hs_protect);
 		ipbinds_remove_port(ipbinds, port);
+		return 0;
+	}
+	if (!ip_hashset_insert(ipbinds->timestamps, ip, (int)time(NULL))) {
+		printf("failed to insert into timestamps\n");
+		pthread_mutex_unlock(ipbinds->hs_protect);
+		ipbinds_remove_port(ipbinds, port);
+		ipbinds_remove_ip(ipbinds, ip);
 		return 0;
 	}
 

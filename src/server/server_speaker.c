@@ -284,7 +284,7 @@ void speaker_go(server_speaker_t *speaker)
 							port
 							);
 				}
-				printf("port 1 used to send out of\n");
+				printf("port %d used to send out of\n", port);
 
 				packet = new_packet(SEND, speaker->serv_ip, speak_strdup(temp->data), temp->header.dst_ip, port, temp->header.dst_port);
 				/*
@@ -307,6 +307,11 @@ void speaker_go(server_speaker_t *speaker)
 					free_packet(temp);
 					temp = NULL;
 				}
+			} else if ((!is_private_address(packet->header.src_ip)) && (is_private_address(packet->header.dst_ip))) {
+				printf("Invalid target address from external domain\n");
+				printf("Dropping packet\n");
+				free_packet(packet);
+				packet = NULL;
 			} else if ((!is_private_address(packet->header.src_ip)) && (!is_private_address(packet->header.dst_ip))) {
 				printf("Dropping packet, not allowed to route from extern to extern\n");
 				free_packet(packet);

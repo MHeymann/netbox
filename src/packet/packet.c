@@ -334,6 +334,7 @@ packet_t *receive_packet(int fd)
 	char sizebuffer[sizeof(int)];
 	char *b = (char *)sizebuffer;
 	int *intp;
+	int port;
 
 	r = read(fd, (void *)(header.eth_preamble), 8);
 	r = read(fd, (void *)(header.dst_mac), 6);
@@ -354,8 +355,10 @@ packet_t *receive_packet(int fd)
 	r = read(fd, (void *)(header.dst_ip), 4);
 	r = read(fd, (void *)(header.src_ip), 4);
 
-	r = read(fd, (void *)(&header.dst_port), sizeof(int));
-	r = read(fd, (void *)(&header.src_port), sizeof(int));
+	r = read(fd, &port, sizeof(int));
+	header.dst_port = ntohl(port);
+	r = read(fd, &port, sizeof(int));
+	header.src_port = ntohl(port);
 
 	r = read(fd, (void *)(b), sizeof(int));
 	
