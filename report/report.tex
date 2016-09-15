@@ -24,7 +24,7 @@ The netbox folder contains 5 items. A Makefile, an obj file, a run\_client file,
 
     \item address
     
-    This contains tools for address allocation, tests and creates mac addresses. The file address\_alloc.c lists all ip addresses reserved for private use one by one.  It also has procedures for testing whether a given address is private or not. The source file macs.c provides data structures and methods for generating mac adresses, and ensuring the generated addresses are not repeated during the running of the program.  
+    This contains tools for address allocation, tests and creates mac addresses. The file address\_alloc.c lists all ip addresses reserved for private use one by one.  It also has procedures for testing whether a given address is private or not. The source file macs.c provides data structures and methods for generating mac addresses, and ensuring the generated addresses are not repeated during the running of the program.  
     
     \item client
     
@@ -36,7 +36,7 @@ The netbox folder contains 5 items. A Makefile, an obj file, a run\_client file,
     
     \item packet
     
-    The packet directory provides tools that fascilitate the creation, serialising, sending and receiving of data packets.  
+    The packet directory provides tools that facilitate the creation, serialising, sending and receiving of data packets.  
     
     \item queue
     
@@ -53,7 +53,7 @@ The netbox folder contains 5 items. A Makefile, an obj file, a run\_client file,
 
 Two basic programs were created: a NAT box and a client.  
 
-\paragraph{NAT box} The NAT box simulates a simplified NAPT protocol.  The datastructures in users.c maintains a one-to-one mapping of client ip addresses and the socket file descriptor integers used to communicate with the clients.  The NAT table in ipbinds.c is responsible for binding a client with a port for a default period of 10 minuntes (600 seconds).  If a binding was unused for a period of 600 seconds, it is unbound and that port is free'd for use by other internal users. 
+\paragraph{NAT box} The NAT box simulates a simplified NAPT protocol.  The datastructures in users.c maintains a one-to-one mapping of client ip addresses and the socket file descriptor integers used to communicate with the clients.  The NAT table in ipbinds.c is responsible for binding a client with a port for a default period of 10 minutes (600 seconds).  If a binding was unused for a period of 600 seconds, it is unbound and that port is free'd for use by other internal users. 
 
 Internal users are all accessed through port 8001 and external users through 8002.  The so called "server listener" thread listens for new incoming connections on both of these ports, adds them to the users datastructure upon connection and removes them upon disconnection.  
 
