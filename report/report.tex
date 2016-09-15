@@ -1,0 +1,101 @@
+\documentclass{article}
+\usepackage[top=30pt,bottom=50pt,left=48pt,right=48pt]{geometry}
+
+\title{CS354 Project 3}
+\author{Ludwe Mtakati 18392806 And Murray Heymann 15988694}
+\date{14 September 2016}
+
+\begin{document}
+\maketitle
+\newpage
+\section{Introduction}
+Network address translation (NAT) is a fundamental component used in the Internet today. It was implemented
+because of the limited size of the IPv4 address space.
+This program involves creating a NAT-box.
+\section{Features Not Included in Solution}
+ 
+\section{Extra Features Included}
+Use of phtreads, as this was not explicitly covered in a practical during concurreny. 
+
+\section{Description of Files}
+The netbox folder contains 5 items. A Makefile, an obj file, a run\_client file, a run\_server file and a src folder. The src folder contains the source code. 
+
+\begin{itemize}
+
+    \item address
+    
+    This contains tools for address allocation, tests and creates mac addresses. The file address\_alloc.c lists all ip addresses reserved for private use one by one.  It also has procedures for testing whether a given address is private or not. The source file macs.c provides data structures and methods for generating mac adresses, and ensuring the generated addresses are not repeated during the running of the program.  
+    
+    \item client
+    
+    Source files found in this directory are used to create a client program that can connect to the natbox.  chat\_client.c contains the "main" function of the client program.  client\_listener.c listens on the socket for incoming packets and client\_speaker.c is responsible for sending packets to the natbox.  
+    
+    \item hashset
+    
+    This directory has data structures for creating one to one mappings between IP's, mac addresses and integers.  
+    
+    \item packet
+    
+    The packet directory provides tools that fascilitate the creation, serialising, sending and receiving of data packets.  
+    
+    \item queue
+    
+    Contains a generic queue based on a priority queue structure. 
+    
+    \item server
+    
+    All source code directly involved in the natbox itself goes here.  chat\_server.c contains the NAT box's "main" function, server\_listener listens for incoming packets and new connections and server\_speaker is responsible for sending packets from the NAT box to other users.
+    
+\end{itemize}
+
+
+\section{Program Description}
+
+Two basic programs were created: a NAT box and a client.  
+
+\paragraph{NAT box} The NAT box simulates a simplified NAPT protocol.  The datastructures in users.c maintains a one-to-one mapping of client ip addresses and the socket file descriptor integers used to communicate with the clients.  The NAT table in ipbinds.c is responsible for binding a client with a port for a default period of 10 minuntes (600 seconds).  If a binding was unused for a period of 600 seconds, it is unbound and that port is free'd for use by other internal users. 
+
+Internal users are all accessed through port 8001 and external users through 8002.  The so called "server listener" thread listens for new incoming connections on both of these ports, adds them to the users datastructure upon connection and removes them upon disconnection.  
+
+The "server speaker" forwards packets to the correct address, and applies the necessary adjustments to the source ip in the IP header.  When an internal user wants to send a packet to an external user, it first check whether the user is already bound to a port.  If not, a new binding is created.  Then, the server's ip address is copied into the source IP field of the IP header and the port to which the internal user is now bound is copied to the source port field of the TCP header.  When a packet is forwarded from an external user to the server's ip address and some port, that port's mapped IP address is looked up and copied to the packet's destination header.  
+
+\paragraph{client}
+The client functions as a basic chat application in the terminal.  The user types text based commands, initiating a sending operation.  The user gives a ip and port for delivery.  When a user starts the client program, she must specify whether she is an internal or external user.  If internal is specified, she is assigned an IP by the server.  otherwise, she must provide her external IP address.  Incoming packts are displayed, as well as the source IP and port. Packets from external users to ports that are no longer bounded and to other external users are simply dropped. 
+
+\section{Experiments}
+All programs were run in valgrind and so checked for memory corruption, non-initialisation and leaks.  Test programs were written for especially the mac and IP generating tools, as these were newly written from scratch.  The hashset and queue structures are known to work, as they are code written by us and used in previous projects, making them rather trusted.  The rest were tested when used in tut 1, is that was the basis on which we built this program.  
+
+\section{Issues Encountered}
+Stopping threads in infinite while loops.  Flags had to be set indicating shutdown, with careful consideration of race conditions.  
+
+\section{Compilation}
+
+The project contains a Makefile in the natbox folder. 
+\\Ensure the build directories are present:  
+
+\$ mkdir -pv obj/\{address,client,hashset,packet,queue,server\} 
+\\Ensure the compilation directory is clean:
+
+\$ make clean
+\\Compile:
+
+\$ make
+\\It should compile without warnings. 
+
+\section{Execution}
+
+To execute the client program:
+
+\textbf{./run\_client \textless host IP\textgreater [\textless internal\textbackslash external\textgreater]}
+\\For the NAT box run
+
+\textbf{./run\_server [\textless server options\textgreater]}
+\\Note that the client must at least have one argument. The options of the NAT box can be "--timeout=\textless n\textgreater" where \textless n\textgreater  is the number of seconds that make up the period of refreshment of the NAT table and  "-ip=\textless ipv4\textgreater" where \textless ipv4\textgreater  is the address of the server that may be different from the hard coded 1.2.3.4. default.  The client's host IP filed must either be an IP address, or the word "localhost" if the natbox is run on the same machine as the client.  
+
+
+\section{Conclusion}
+
+Although ipv6 has now solved the problem of a limited address domain in the Internet for the foreseeable future, NAT is still widely used and understanding the working of a NAT box is still very useful in learning the key concepts of networking.  Our implementation simulated the core elements involved in an NAT router, so we deem the project a success.
+
+\end{document}
+
