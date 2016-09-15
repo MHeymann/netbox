@@ -18,6 +18,7 @@ typedef struct speaker {
 	int run_status;
 	pthread_mutex_t *status_lock;
 	ipbinds_t *iptable;
+	int ip_timeout;
 	unsigned char serv_ip[4];
 } server_speaker_t;
 
@@ -82,5 +83,7 @@ void speaker_stop(server_speaker_t *speaker);
  * @param[in] speaker: The struct to administer overhead.
  */
 int speaker_running(server_speaker_t *speaker);
+
+void refresh_ip_binds(server_speaker_t *speaker);
 
 #endif

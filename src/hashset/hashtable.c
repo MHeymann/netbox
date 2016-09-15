@@ -16,8 +16,8 @@
 #include "hashtable.h"
 #include "../queue/queue.h"
 
-#define INITIAL_DELTA 23
-#define INITIAL_DIFF 5
+#define INITIAL_DELTA 10
+#define INITIAL_DIFF 2
 #define BUFFER_SIZE 1024
 
 /*** Some Structs ********************************************************/
@@ -131,7 +131,6 @@ void ht_update(hashtable_p ht, void *key, void *value, void (*val_free)(void *))
 	for (entry = ht->table[hash]; entry; entry = entry->next_ptr) {
 		if (ht->cmp(entry->key, key) == 0) {
 			/* found it */
-			printf("update: found it\n");
 			break;
 		}
 	}

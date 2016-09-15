@@ -94,6 +94,8 @@ server_listener_t *new_server_listener(int *ports, int port_count, users_t *user
 	pthread_mutex_init(listener->status_lock, NULL);
 	listener->users = users;
 	listener->speaker = speaker;
+	listener->time_stamp = (long)time(NULL);
+	listener->ip_timeout = 600; /* default: 10 minutes */
 
 	listener->ip_allocator = new_address_allocator();
 	listener->mac_allocator = new_mac_list();
@@ -257,6 +259,12 @@ void listener_go(server_listener_t *listener)
 	printf("Waiting for incoming connections...\n");
 	addrlen = sizeof(address);
 	while (listener_running(listener)) {
+		
+		if (((long)time(NULL) - listener->time_stamp) > listener->ip_timeout) {
+			listener->time_stamp = (long)time(NULL);
+			refresh_ip_binds(listener->speaker);
+		}
+
 		/* clear the socket set */
 		FD_ZERO(&readfds);
 
@@ -363,7 +371,9 @@ void listener_go(server_listener_t *listener)
 					send_packet(packet, new_socket);
 					free_packet(packet);
 					packet = NULL;
+					/*
 					free(mac_add);
+					*/
 					mac_add = NULL;
 				}
 			}
@@ -461,7 +471,7 @@ char *listen_strdup(char *s)
 	int i = 0;
 	int j = 0;
 
-	while((c[i++] = s[j++]));
+	while ((c[i++] = s[j++]));
 
 	return c;
 }

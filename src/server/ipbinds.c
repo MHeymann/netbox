@@ -107,40 +107,7 @@ unsigned char *port_get_bound_ip(ipbinds_t *ipbinds, int port)
 	return ip;
 }
 
-/* remember to free this queue appropriately */
-/*
-queue_t *get_ports(ipbinds_t *ipbinds)
-{
-	queue_t *q = NULL;
 
-	pthread_mutex_lock(ipbinds->hs_protect);
-	q = fdhs_get_keys(ipbinds->ports);
-	pthread_mutex_unlock(ipbinds->hs_protect);
-
-	return q;
-}
-*/
-
-/*
-void ipbinds_send_packet(ipbinds_t *ipbinds, packet_t *packet)
-{
-	int port = 0;
-
-	pthread_mutex_lock(ipbinds->hs_protect);
-	port = ip_get_fd(ipbinds->ips, packet->header.dst_ip);
-	printf("%d was found in ipbinds.c\n", port);
-	if (!port) {
-		pthread_mutex_unlock(ipbinds->hs_protect);
-		fprintf(stderr, "Failed to send message in ipbinds.c!!!\n");
-		return;
-	}
-
-	send_packet(packet, port);
-
-	pthread_mutex_unlock(ipbinds->hs_protect);
-
-}
-*/
 
 void ipbinds_remove_port(ipbinds_t *ipbinds, int port)
 {
@@ -150,6 +117,7 @@ void ipbinds_remove_port(ipbinds_t *ipbinds, int port)
 	ip = fd_get_ip(ipbinds->ports, port);
 	if (ip) {
 		ip_hashset_remove(ipbinds->ips, ip);
+		ip_hashset_remove(ipbinds->timestamps, ip);
 	} else {
 		fprintf(stderr, "this is weird when removing port\n");
 		pthread_mutex_unlock(ipbinds->hs_protect);
@@ -176,6 +144,7 @@ void ipbinds_remove_ip(ipbinds_t *ipbinds, unsigned char *ip)
 		return;
 	}
 	ip_hashset_remove(ipbinds->ips, ip);
+	ip_hashset_remove(ipbinds->timestamps, ip);
 
 	pthread_mutex_unlock(ipbinds->hs_protect);
 }

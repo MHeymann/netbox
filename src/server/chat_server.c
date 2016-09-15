@@ -8,28 +8,48 @@
 #include "server_speaker.h"
 
 char ch = '\0';
+int ip_timeout = 600;
+unsigned char serv_ip[4];
+unsigned char default_ip[4] = {
+	1,
+	2,
+	3,
+	4
+};
 
 /*** Helper Function Prototypes ******************************************/
 
 void read_line(FILE *f, char *line);
+void get_args(int argc, char *argv[]);
+void set_defaults();
 
 /*** The Main Routine ****************************************************/
 
-int main (void) 
+int main (int argc, char *argv[]) 
 {
 	pthread_t listen_thread;
 	pthread_t speak_thread;
 	users_t *users = NULL;
 	server_speaker_t *speaker;
 	server_listener_t *listener;
+	/*
+	char *end_ptr;
+	char *next_ptr;
+	int i;
+	*/
 	int *ports;
 	char line[100];
-	unsigned char serv_ip[4] = {
-		1,
-		2,
-		3,
-		4
-	};
+
+	set_defaults();
+
+	get_args(argc, argv);	
+
+	printf("Server IP: %d.%d.%d.%d\n",
+					serv_ip[0],
+					serv_ip[1],
+					serv_ip[2],
+					serv_ip[3]
+					);
 
 	ports = malloc(2 * sizeof(int));
 	ports[0] = 8001;
@@ -45,6 +65,10 @@ int main (void)
 	/* and connections and sends out data to the various different users */
 	speaker = new_server_speaker(users, serv_ip);
 	listener = new_server_listener(ports, 2, users, speaker);
+
+	printf("Using ip timeout period of %d seconds\n", ip_timeout);
+	speaker->ip_timeout = ip_timeout;
+	listener->ip_timeout = ip_timeout;
 
 	/* Launch the two threads */
 	/* args are: the thread, unused attribute, start function, and argument for
@@ -117,5 +141,61 @@ void read_line(FILE *f, char *line)
 			default:
 				line[i] = ch;
 		}
+	}
+}
+
+void get_args(int argc, char *argv[])
+{
+	int i, j;
+	char *next_ptr;
+	char *end_ptr;
+	for (i = 1; i < argc; i++) {
+		if (strncmp(argv[i], "-ip=", 4) == 0) {
+			next_ptr = argv[i] + 4;
+			for (j = 0; j < 4; j++) {
+				serv_ip[j] = strtol(next_ptr, &end_ptr, 10);
+				if (end_ptr == next_ptr) {
+	
+					printf("invalid ip address passed as argument\n");
+					goto DEFAULT_IP;
+				} else  {
+					if (j != 3) {
+						next_ptr = end_ptr + 1;
+					}
+				}
+			}
+			
+			continue;
+DEFAULT_IP:
+			printf("defaulting to %d.%d.%d.%d\n", 
+					default_ip[0],
+					default_ip[1],
+					default_ip[2],
+					default_ip[3]
+					);
+			for (j = 0; j < 4; j++) {
+				serv_ip[j] = default_ip[j];
+			}
+		} else if (strncmp(argv[i], "--timeout=", 10) == 0) {
+			next_ptr = argv[i] + 10;
+			j = strtol(next_ptr, &end_ptr, 10);
+			if (end_ptr == next_ptr) {
+				printf("invalid timeout provided.  Using default value\n");
+			} else {
+				ip_timeout = j;
+			}
+
+		} else {
+			printf("argument '%s; not recognized\n", argv[i]);
+		}
+	}
+}
+
+void set_defaults()
+{
+	int i;
+	ip_timeout = 600;
+	for (i = 0; i < 4; i++) {
+		serv_ip[i] = default_ip[i];
 	}
 }

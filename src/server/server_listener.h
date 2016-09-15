@@ -21,6 +21,8 @@ typedef struct listener {
 	server_speaker_t *speaker;
 	address_alloc_ptr ip_allocator;
 	mac_list_t *mac_allocator;
+	long time_stamp;
+	long ip_timeout;
 } server_listener_t;
 
 /*** Function Prototypes *************************************************/

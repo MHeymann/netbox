@@ -74,6 +74,7 @@ server_speaker_t *new_server_speaker(users_t *users, unsigned char *serv_ip)
 	pthread_mutex_init(speaker->status_lock, NULL);
 
 	speaker->iptable = new_ipbinds();
+	speaker->ip_timeout = 600;
 
 	return speaker;
 }
@@ -226,6 +227,33 @@ int speaker_running(server_speaker_t *speaker)
 	return status;
 }
 
+void refresh_ip_binds(server_speaker_t *speaker)
+{
+	int currtime = (long)time(NULL);
+	queue_t *q = ipbinds_get_ips(speaker->iptable);
+	unsigned char *ip = NULL;
+
+	printf("refreshing ip port table\n");
+
+	while ((ip = pop_first(q))) {
+		if (currtime - ip_get_time(speaker->iptable, ip) > speaker->ip_timeout) {
+			ipbinds_remove_ip(speaker->iptable, ip);
+			printf("Removed %d.%d.%d.%d\n", 
+					ip[0],
+					ip[1],
+					ip[2],
+					ip[3]
+					);
+		}
+		free(ip);
+		ip = NULL;
+	}
+
+	free_queue(q);
+	q = NULL;
+	printf("refresh done\n");
+}
+
 
 /*** Helper Functions ****************************************************/
 
@@ -306,6 +334,8 @@ void speaker_go(server_speaker_t *speaker)
 					packet->header.dst_port = 8001;
 					free_packet(temp);
 					temp = NULL;
+					free(ip);
+					ip = NULL;
 				}
 			} else if ((!is_private_address(packet->header.src_ip)) && (is_private_address(packet->header.dst_ip))) {
 				printf("Invalid target address from external domain\n");
