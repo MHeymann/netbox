@@ -229,6 +229,7 @@ CONNECT:
 				client = new_client();
 				free(password);
 				password = NULL;
+				exit(1);
 			} else {
 				/* success */
 				client->connected_status = TRUE;

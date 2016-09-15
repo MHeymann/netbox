@@ -16,7 +16,8 @@ char *read_string_from_buffer(char *buffer, int *global_index, int length);
 unsigned char *read_ip_from_buffer(char *buffer, int *global_index);
 int cmp(void *a, void *b);
 
-void write_int_to_buffer(char *buffer, int *global_index, int integer);
+void write_int32_to_buffer(char *buffer, int *global_index, int32_t integer);
+void write_int16_to_buffer(char *buffer, int *global_index, int16_t integer);
 void write_string_to_buffer(char *buffer, int *global_index, int length, char *string);
 void write_n_bytes_to_buffer(char *buffer, int *global_index, int n, unsigned char *bytes);
 
@@ -41,7 +42,7 @@ char *serialize(packet_t *packet, int *psize)
 	node_t *n = NULL;
 
 	/* headers: ethernet + tcp */
-	header_size = 22 + 20 + 2 * sizeof(int);
+	header_size = 22 + 20 + 20;
 	
 
 	/* payload sizes */
@@ -92,46 +93,56 @@ char *serialize(packet_t *packet, int *psize)
 	write_n_bytes_to_buffer(buffer, &global_index, 4, packet->header.dst_ip);
 	write_n_bytes_to_buffer(buffer, &global_index, 4, packet->header.src_ip);
 
-	write_int_to_buffer(buffer, &global_index, packet->header.dst_port);
-	write_int_to_buffer(buffer, &global_index, packet->header.src_port);
+	write_int16_to_buffer(buffer, &global_index, packet->header.dst_port);
+	write_int16_to_buffer(buffer, &global_index, packet->header.src_port);
 
-	write_int_to_buffer(buffer, &global_index, size);
+	write_int32_to_buffer(buffer, &global_index, packet->header.sequence_no);
+	write_int32_to_buffer(buffer, &global_index, packet->header.ack_no);
 
-	write_int_to_buffer(buffer, &global_index, packet->code);
+	write_n_bytes_to_buffer(buffer, &global_index, 2, packet->header.data_offset_reserved_flags);
+	write_int16_to_buffer(buffer, &global_index, packet->header.window_size);
+
+
+	write_int16_to_buffer(buffer, &global_index, packet->header.tcpchecksum);
+	write_int16_to_buffer(buffer, &global_index, packet->header.urgent_pointer);
+	
+	write_int32_to_buffer(buffer, &global_index, size);
+
+	write_int32_to_buffer(buffer, &global_index, packet->code);
 
 	if (packet->name) {
-		write_int_to_buffer(buffer, &global_index, packet->name_len);
+		write_int32_to_buffer(buffer, &global_index, packet->name_len);
 		write_string_to_buffer(buffer, &global_index, packet->name_len, packet->name);
 	} else {
-		write_int_to_buffer(buffer, &global_index, 0);
+		write_int32_to_buffer(buffer, &global_index, 0);
 	}
 
 	if (packet->data) {
-		write_int_to_buffer(buffer, &global_index, packet->data_len);
+		write_int32_to_buffer(buffer, &global_index, packet->data_len);
 		write_string_to_buffer(buffer, &global_index, packet->data_len, packet->data);
 	} else {
-		write_int_to_buffer(buffer, &global_index, 0);
+		write_int32_to_buffer(buffer, &global_index, 0);
 	}
 
 	if (packet->to) {
-		write_int_to_buffer(buffer, &global_index, packet->to_len);
+		write_int32_to_buffer(buffer, &global_index, packet->to_len);
 		write_string_to_buffer(buffer, &global_index, packet->to_len, packet->to);
 	} else {
-		write_int_to_buffer(buffer, &global_index, 0);
+		write_int32_to_buffer(buffer, &global_index, 0);
 	}
 
 	if (packet->users) {
-		write_int_to_buffer(buffer, &global_index, packet->list_len);
+		write_int32_to_buffer(buffer, &global_index, packet->list_len);
 		for (n = packet->users->head; n; n = n->next) {
 			/*
 			len = (int)strlen((char *)n->data);
-			write_int_to_buffer(buffer, &global_index, len);
+			write_int32_to_buffer(buffer, &global_index, len);
 			write_string_to_buffer(buffer, &global_index, len, (char *)n->data);
 			*/
 			write_n_bytes_to_buffer(buffer, &global_index, 4, n->data);
 		}
 	} else {
-		write_int_to_buffer(buffer, &global_index, 0);
+		write_int32_to_buffer(buffer, &global_index, 0);
 	}
 
 	return buffer;
@@ -271,12 +282,20 @@ int cmp(void *a, void *b)
 	}
 }
 
-void write_int_to_buffer(char *buffer, int *global_index, int integer)
+void write_int32_to_buffer(char *buffer, int *global_index, int32_t integer)
 {
-	int *iptr = NULL;
-	iptr = (int *)(buffer + *global_index);
+	int32_t *iptr = NULL;
+	iptr = (int32_t *)(buffer + *global_index);
 	*iptr = htonl(integer);
-	*global_index += sizeof(int);
+	*global_index += sizeof(int32_t);
+}
+
+void write_int16_to_buffer(char *buffer, int *global_index, int16_t integer)
+{
+	int16_t *iptr = NULL;
+	iptr = (int16_t *)(buffer + *global_index);
+	*iptr = htons(integer);
+	*global_index += sizeof(int16_t);
 }
 
 

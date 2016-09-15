@@ -27,7 +27,7 @@ EXES = run_server run_client
 ### FLAGS #################################################################
 
 CFLAGS = -Wall -Wextra -ansi -pedantic -g -O
-DBGFLAGS = -DDEBUG #-DDEBUGHS #-DPDEBUG
+DBGFLAGS = #-DDEBUG #-DDEBUGHS #-DPDEBUG
 LFLAGS = -pthread
 
 ### COMMANDS ##############################################################

@@ -68,6 +68,17 @@ packet_t *new_empty_packet()
 	packet->header.src_port = 0;
 	packet->header.dst_port = 0;
 
+	packet->header.sequence_no = 0;
+	packet->header.ack_no = 0;
+
+	packet->header.data_offset_reserved_flags[0] = '\0';
+	packet->header.data_offset_reserved_flags[1] = '\0';
+	packet->header.window_size = 0;
+
+	packet->header.tcpchecksum = 0;
+	packet->header.urgent_pointer = 0;
+	
+
 	packet->code = -1;
 
 	packet->name = NULL; 
@@ -334,7 +345,8 @@ packet_t *receive_packet(int fd)
 	char sizebuffer[sizeof(int)];
 	char *b = (char *)sizebuffer;
 	int *intp;
-	int port;
+	int16_t port;
+	int32_t int32;
 
 	r = read(fd, (void *)(header.eth_preamble), 8);
 	r = read(fd, (void *)(header.dst_mac), 6);
@@ -355,10 +367,24 @@ packet_t *receive_packet(int fd)
 	r = read(fd, (void *)(header.dst_ip), 4);
 	r = read(fd, (void *)(header.src_ip), 4);
 
-	r = read(fd, &port, sizeof(int));
-	header.dst_port = ntohl(port);
-	r = read(fd, &port, sizeof(int));
-	header.src_port = ntohl(port);
+	r = read(fd, &port, sizeof(int16_t));
+	header.dst_port = ntohs(port);
+	r = read(fd, &port, sizeof(int16_t));
+	header.src_port = ntohs(port);
+
+	r = read(fd, &int32, sizeof(int32_t));
+	header.sequence_no = ntohl(int32);
+	r = read(fd, &int32, sizeof(int32_t));
+	header.ack_no = ntohl(int32);
+
+	r = read(fd, (void *)(header.data_offset_reserved_flags), 2);
+	r = read(fd, &port, sizeof(int16_t));
+	header.window_size = ntohs(port);
+
+	r = read(fd, &port, sizeof(int16_t));
+	header.tcpchecksum = ntohs(port);
+	r = read(fd, &port, sizeof(int16_t));
+	header.urgent_pointer = ntohs(port);
 
 	r = read(fd, (void *)(b), sizeof(int));
 	

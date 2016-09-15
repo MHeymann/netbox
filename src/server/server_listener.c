@@ -31,6 +31,7 @@ void listener_go(server_listener_t *listener);
 int check_user_password(unsigned char *name, char *pw);
 char *listen_strdup(char *s);
 unsigned char *listen_ipdup(unsigned char *s);
+int l_is_server_address(unsigned char *ip, unsigned char *sip);
 
 unsigned char null_address[4] = {
 	'\0',
@@ -417,6 +418,12 @@ void listener_go(server_listener_t *listener)
 						send_packet(p, sd);
 						free_packet(p);
 						p = NULL;
+					} else if (l_is_server_address(packet->header.src_ip, listener->speaker->serv_ip)) {
+						printf("Someone with server ip address tried to connect\n");
+						p = new_packet(SEND, null_address, listen_strdup("denial"), packet->header.src_ip, 8002, packet->header.src_port);
+						send_packet(p, sd);
+						free_packet(p);
+						p = NULL;
 					} else if ((check_user_password(packet->header.src_ip, packet->data)) && 
 							login_connection(listener->users, sd, packet->header.src_ip)) {
 						push_user_list(listener->speaker);
@@ -487,4 +494,15 @@ unsigned char *listen_ipdup(unsigned char *s)
 		c[i] = s[i];
 	}
 	return c;
+}
+
+int l_is_server_address(unsigned char *ip, unsigned char *sip)
+{
+	int i;
+	for (i = 0; i < 4; i++) {
+		if (ip[i] != sip[i]) {
+			return FALSE;
+		}
+	}
+	return TRUE;
 }

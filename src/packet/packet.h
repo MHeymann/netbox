@@ -1,15 +1,18 @@
 #ifndef PACKET_H
 #define PACKET_H
 #include "../queue/queue.h"
+#include <stdint.h>
 
 /*** struct description **************************************************/
 
 typedef struct p_headder {
+	/* Ethernet header */
 	unsigned char eth_preamble[8];
 	unsigned char dst_mac[6];
 	unsigned char src_mac[6];
 	unsigned char ethernet_type[2];
 
+	/* IP header */
 	unsigned char version_ihl;
 	unsigned char dscp_ecn;
 	unsigned char total_length[2];
@@ -24,8 +27,19 @@ typedef struct p_headder {
 	unsigned char dst_ip[4];
 	unsigned char src_ip[4];
 
-	int dst_port;
-	int src_port;
+	/* TCP header */
+	int16_t dst_port;
+	int16_t src_port;
+
+	int32_t sequence_no;
+	int32_t ack_no;
+
+	unsigned char data_offset_reserved_flags[2];
+	int16_t window_size;
+
+	int16_t tcpchecksum;
+	int16_t urgent_pointer;
+
 } p_header_t;
 
 typedef struct packet {
