@@ -189,7 +189,6 @@ void print_fd_hashset(fd_hashset_ptr hs)
  */
 void free_fd_hashset(fd_hashset_ptr hs)
 {
-	/* TODO: close file descriptor? */
 	ht_free(hs->ht, fd_dud_free, free);
 	hs->ht = NULL;
 	free(hs);

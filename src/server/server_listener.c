@@ -354,6 +354,7 @@ void listener_go(server_listener_t *listener)
 					packet = NULL;
 					free(ip_add);
 					ip_add = NULL;
+					push_user_list(listener->speaker);
 					
 				} else {
 					/* external user */
@@ -401,7 +402,6 @@ void listener_go(server_listener_t *listener)
 					push_user_list(listener->speaker);
 					close(sd);
 				} else if (packet->code == SEND) {
-					printf("adding packet to queue\n");
 					add_packet_to_queue(listener->speaker, packet);
 					packet = NULL;
 				} else if (packet->code == ECHO) {

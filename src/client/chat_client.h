@@ -53,6 +53,9 @@ void free_chat_client(chat_client_t *client);
  *						might be referenced.
  * @param[in] s:		The string to be displayed
  */
+
+void disconnect_client(chat_client_t *client);
+
 void client_append(chat_client_t *client, char *s);
 
 /** 

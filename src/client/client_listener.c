@@ -182,14 +182,16 @@ void listener_go(client_listener_t *listener)
 		packet = receive_packet(listener->sd);
 		/* handle appropriately, based on code in packet */
 		if (!packet) {
-			printf("server went offline\n");
+			printf("Server went offline\n");
+			disconnect_client(listener->chat_client);
 			break;
 		} else if(packet->code == SEND) {
-			sprintf(s, "%d.%d.%d.%d: %s\n", 
+			sprintf(s, "%d.%d.%d.%d:%d:: %s\n", 
 					(int)packet->header.src_ip[0], 
 					(int)packet->header.src_ip[1], 
 					(int)packet->header.src_ip[2], 
 					(int)packet->header.src_ip[3],
+					packet->header.src_port,
 					(char *)packet->data);
 			client_append((chat_client_t *)listener->chat_client, s);
 		} else if(packet->code == ECHO) {

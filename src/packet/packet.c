@@ -363,10 +363,10 @@ packet_t *receive_packet(int fd)
 	r = read(fd, (void *)(b), sizeof(int));
 	
 	if (r == 0) {
-#ifdef DEBUG
+		/*
 		printf("0 disconnect*************\n");
 		printf("Does this ever happen??*************\n");
-#endif
+		*/
 		close(fd);
 		return NULL;
 	} else if (r == -1) {

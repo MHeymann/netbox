@@ -321,9 +321,8 @@ void speaker_go(server_speaker_t *speaker)
 				*/
 				free_packet(temp);
 			} else if ((!is_private_address(packet->header.src_ip)) && (is_server_address(packet->header.dst_ip, speaker->serv_ip))) {
-				printf("Looking up %d\n", packet->header.dst_port);
 				if ((ip = port_get_bound_ip(speaker->iptable, packet->header.dst_port)) == NULL) {
-					printf("This port is unbound.");
+					printf("This port is unbound.\n");
 					free_packet(packet);
 					packet = NULL;
 				} else {

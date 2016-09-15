@@ -359,8 +359,13 @@ CONNECT:
 			stop_listener(client->listener);
 			printf("Joining listen thread\n");
 			pthread_join(*(client->listen_thread), NULL);
-			printf("Notifying server\n");
-			speaker_logoff(client->speaker);
+
+			pthread_mutex_lock(client->connection_mutex);
+			if (client->connected_status) {
+				printf("Notifying server\n");
+				speaker_logoff(client->speaker);
+			}
+			pthread_mutex_unlock(client->connection_mutex);
 			free_chat_client(client);
 			client = new_client();
 			goto ESTABLISH_CONNECTION;
@@ -433,6 +438,13 @@ chat_client_t *new_client()
 	return client;
 }
 
+void disconnect_client(chat_client_t *client)
+{
+	pthread_mutex_lock(client->connection_mutex);
+	client->connected_status = FALSE;
+	pthread_mutex_unlock(client->connection_mutex);
+}
+
 /** 
  * Free the chat client structure.
  *
@@ -490,7 +502,7 @@ void client_append(chat_client_t *client, char *s)
 	if (!client) {
 		return;
 	}
-	printf("display:: %s",  s);
+	printf("%s",  s);
 }
 
 /** 
@@ -628,3 +640,4 @@ int connect_client(char *hostname, int hostport, int *sd)
 		return TRUE;
 	}
 }
+

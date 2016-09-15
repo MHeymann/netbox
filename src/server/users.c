@@ -91,7 +91,6 @@ void users_send_packet(users_t *users, packet_t *packet)
 
 	pthread_mutex_lock(users->hs_protect);
 	fd = ip_get_fd(users->ips, packet->header.dst_ip);
-	printf("%d was found in users.c\n", fd);
 	if (!fd) {
 		pthread_mutex_unlock(users->hs_protect);
 		fprintf(stderr, "Failed to send message in users.c!!!\n");
@@ -99,7 +98,6 @@ void users_send_packet(users_t *users, packet_t *packet)
 	}
 
 	send_packet(packet, fd);
-	/* TODO: maybe let send packet return and put this in an if statement */
 
 	pthread_mutex_unlock(users->hs_protect);
 
@@ -142,8 +140,6 @@ void remove_ip(users_t *users, unsigned char *ip)
 		pthread_mutex_unlock(users->hs_protect);
 		return;
 	}
-	/*
-	*/
 	ip_hashset_remove(users->ips, ip);
 
 	printf("User %d.%d.%d.%d went offline, %d still online\n", 
